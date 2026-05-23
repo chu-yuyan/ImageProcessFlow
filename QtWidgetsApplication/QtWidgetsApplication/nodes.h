@@ -10,7 +10,7 @@ class LoadImageNode : public BaseNode
 public:
     LoadImageNode() 
     {
-        m_name = "Load Image";
+        m_name = "加载图像";
         m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
     }
 
@@ -45,7 +45,7 @@ class SaveImageNode : public BaseNode
 public:
     SaveImageNode() 
     {
-        m_name = "Save Image";
+        m_name = "保存图像";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
     }
 
@@ -76,7 +76,7 @@ class ShowImageNode : public BaseNode
 public:
     ShowImageNode() 
     {
-        m_name = "Show Image";
+        m_name = "显示图片";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
     }
 
@@ -84,9 +84,10 @@ public:
 
     void setDisplayCallback(std::function<void(const cv::Mat&)> callback) 
     {
-        m_displayCallback = std::move(callback);
+        m_displayCallback = callback;
     }
 
+    // 新增：清除显示回调
     void clearDisplayCallback()
     {
         m_displayCallback = nullptr;
@@ -111,12 +112,30 @@ class BrightnessNode : public BaseNode
 public:
     BrightnessNode() 
     {
-        m_name = "Brightness";
+        m_name = "亮度";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
         m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
     }
 
     QString typeName() const override { return "Brightness"; }
+
+    QMap<QString, QVariant> getParameters() const override { return { {"brightness", m_brightness} }; }
+
+    QMap<QString, ParameterMeta> getParameterMeta() const override
+    {
+        ParameterMeta meta;
+        meta.typeId = QMetaType::Int;
+        meta.minimum = -255;
+        meta.maximum = 255;
+        meta.singleStep = 5;
+        meta.defaultValue = 0;
+        return { {"brightness", meta} };
+    }
+
+    void setParameter(const QString& name, const QVariant& value) override 
+    {
+        if (name == "brightness") m_brightness = value.toInt();
+    }
 
     void process() override 
     {
@@ -126,13 +145,6 @@ public:
         cv::Mat dst;
         src.convertTo(dst, -1, 1, m_brightness);
         m_outputs[0].data = QVariant::fromValue(dst);
-    }
-
-    QMap<QString, QVariant> getParameters() const override { return { {"brightness", m_brightness} }; }
-
-    void setParameter(const QString& name, const QVariant& value) override 
-    {
-        if (name == "brightness") m_brightness = value.toInt();
     }
 };
 
@@ -146,7 +158,7 @@ public:
 
     BlurNode() 
     {
-        m_name = "Blur";
+        m_name = "高斯模糊";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
         m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
     }
@@ -171,6 +183,17 @@ public:
     {
         if (name == "radius") m_radius = value.toInt();
     }
+
+    QMap<QString, ParameterMeta> getParameterMeta() const override
+    {
+        ParameterMeta meta;
+        meta.typeId = QMetaType::Int;
+        meta.minimum = 1;
+        meta.maximum = 20;
+        meta.singleStep = 1;
+        meta.defaultValue = 3;
+        return { {"radius", meta} };
+    }
 };
 
 
@@ -180,7 +203,7 @@ class GrayNode : public BaseNode
     public:
         GrayNode() 
         {
-            m_name = "To Gray";
+            m_name = "变成灰度";
             m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
             m_outputs.push_back({ "Image", ImageType::Gray, QVariant() });
         }
@@ -200,16 +223,37 @@ class GrayNode : public BaseNode
 //调整大小
 class ResizeNode : public BaseNode 
 {
-    int m_width = 640;
-    int m_height = 480;
+    int m_width = 400;
+    int m_height = 400;
 public:
     ResizeNode() 
     {
-        m_name = "Resize";
+        m_name = "调整大小";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
         m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
     }
+
     QString typeName() const override { return "Resize"; }
+
+    QMap<QString, QVariant> getParameters() const override { return { {"width", m_width}, {"height", m_height} }; }
+
+    QMap<QString, ParameterMeta> getParameterMeta() const override
+    {
+        ParameterMeta meta;
+        meta.typeId = QMetaType::Int;
+        meta.minimum = 1;
+        meta.maximum = 4096;
+        meta.singleStep = 10;
+        meta.defaultValue = 400;
+
+        return { {"width", meta}, {"height", meta} };
+    }
+
+    void setParameter(const QString& name, const QVariant& value) override {
+        if (name == "width") m_width = value.toInt();
+        else if (name == "height") m_height = value.toInt();
+    }
+
     void process() override {
         if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
         cv::Mat src = m_inputs[0].data.value<cv::Mat>();
@@ -217,11 +261,6 @@ public:
         cv::Mat dst;
         cv::resize(src, dst, cv::Size(m_width, m_height));
         m_outputs[0].data = QVariant::fromValue(dst);
-    }
-    QMap<QString, QVariant> getParameters() const override { return { {"width", m_width}, {"height", m_height} }; }
-    void setParameter(const QString& name, const QVariant& value) override {
-        if (name == "width") m_width = value.toInt();
-        else if (name == "height") m_height = value.toInt();
     }
 };
 
@@ -232,7 +271,7 @@ class RotateNode : public BaseNode
 public:
     RotateNode() 
     {
-        m_name = "Rotate";
+        m_name = "旋转";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
         m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
     }
@@ -256,6 +295,17 @@ public:
     void setParameter(const QString& name, const QVariant& value) override 
     {
         if (name == "angle") m_angle = value.toDouble();
+    }
+
+    QMap<QString, ParameterMeta> getParameterMeta() const override
+    {
+        ParameterMeta meta;
+        meta.typeId = QMetaType::Double;
+        meta.minimum = -360.0;
+        meta.maximum = 360.0;
+        meta.singleStep = 1.0;
+        meta.defaultValue = 0.0;
+        return { {"angle", meta} };
     }
 };
 

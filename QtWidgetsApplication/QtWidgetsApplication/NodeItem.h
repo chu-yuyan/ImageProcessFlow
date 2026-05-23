@@ -38,6 +38,9 @@ public:
     void updateConnections();
     void createPorts();
 
+    NodePort* getInputPort(int index) const;
+    NodePort* getOutputPort(int index) const;
+
 protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant& value) override;
 

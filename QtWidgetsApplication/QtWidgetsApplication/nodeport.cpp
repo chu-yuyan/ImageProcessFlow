@@ -63,9 +63,6 @@ bool NodePort::canConnect(const NodePort* other) const
     // 必须一个输入一个输出
     if (isInput() == other->isInput())
         return false;
-    // 类型必须相同
-    if (portType() != other->portType())
-        return false;
     // 检查是否已经连接过
     for (auto conn : m_connections) {
         if (conn->hasPort(other))

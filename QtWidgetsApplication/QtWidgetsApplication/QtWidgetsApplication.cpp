@@ -8,6 +8,8 @@
 #include "NodeFactory.h"
 #include "nodes.h"
 #include "NodeView.h"
+#include "WorkflowSerializer.h"
+#include "WorkflowExecutor.h"
 
 #include <QGraphicsView>
 #include <QListWidget>
@@ -23,11 +25,7 @@
 #include <QLineEdit>
 #include <QCheckBox>
 #include <QLayoutItem>
-
-static bool s_matRegistered = []() {
-    qRegisterMetaType<cv::Mat>("cv::Mat");
-    return true;
-    }();
+#include <limits>
 
 QtWidgetsApplication::QtWidgetsApplication(QWidget* parent)
     : QMainWindow(parent)
@@ -69,8 +67,6 @@ QtWidgetsApplication::QtWidgetsApplication(QWidget* parent)
             layout->addStretch(1);
         }
 
-        // 调试用：确认区域存在（稳定后可删）
-        m_propertyPanel->setStyleSheet("background:#f5f5f5; border:1px solid #cccccc;");
     }
 
     // ========== 创建自己的工具栏（不依赖 UI） ==========
@@ -78,15 +74,39 @@ QtWidgetsApplication::QtWidgetsApplication(QWidget* parent)
     ui.mainToolBar->setVisible(true);
     ui.mainToolBar->show();
 
+    //仨按钮
     auto* executeAction = new QAction("Execute Workflow", this);
     ui.mainToolBar->addAction(executeAction);
     connect(executeAction, &QAction::triggered, this, &QtWidgetsApplication::executeWorkflow);
-    // 确保工具栏显示
-    //myToolBar->show();
-    // ===============================================
+ 
+    auto* saveAction = new QAction("Save Workflow", this);
+    ui.mainToolBar->addAction(saveAction);
+    connect(saveAction, &QAction::triggered, this, &QtWidgetsApplication::saveWorkflow);
 
+    auto* loadAction = new QAction("Load Workflow", this);
+    ui.mainToolBar->addAction(loadAction);
+    connect(loadAction, &QAction::triggered, this, &QtWidgetsApplication::loadWorkflow);
     initSceneAndView();
     initNodeList();
+
+    if (m_scene) {
+        connect(m_scene.get(), &NodeScene::nodeAboutToBeRemoved, this, [this](BaseNode* logic) {
+            if (!logic) return;
+
+            // 1) 如果参数面板正显示该节点，清空，避免悬空指针
+            if (m_currentNodeForProperties == logic) {
+                showParametersForNode(nullptr);
+            }
+
+            // 2) 如果删的是 active show，清回调并置空指针，同时清空预览
+            if (m_activeShowNode && m_activeShowNode == logic) {
+                m_activeShowNode->clearDisplayCallback();
+                m_activeShowNode = nullptr;
+
+                displayImage(cv::Mat()); // 这里：清空右侧预览
+            }
+        });
+    }
 
     if (auto* list = findChild<QListWidget*>("nodeListWidget")) {
         connect(list, &QListWidget::itemDoubleClicked, this, &QtWidgetsApplication::onNodeListItemDoubleClicked);
@@ -173,12 +193,26 @@ void QtWidgetsApplication::initNodeList()
     auto* list = findChild<QListWidget*>("nodeListWidget");
     if (!list) return;
     list->clear();
-    QStringList types = { "LoadImage","SaveImage","ShowImage",
-                         "Brightness","Blur","Gray","Resize","Rotate" };
 
-    for (const QString& type : types) {
-        auto* item = new QListWidgetItem(type);
-        item->setData(Qt::UserRole, type);
+    struct NodeEntry {
+        QString key;   // 工厂 key / typeName
+        QString text;  // UI 显示
+    };
+
+    const QList<NodeEntry> entries = {
+        { "LoadImage",   "加载图像" },
+        { "SaveImage",   "保存图像" },
+        { "ShowImage",   "显示图像" },
+        { "Brightness",  "亮度调整" },
+        { "Blur",        "高斯模糊" },
+        { "Gray",        "灰度化" },
+        { "Resize",      "调整大小" },
+        { "Rotate",      "旋转" }
+    };
+
+    for (const auto& e : entries) {
+        auto* item = new QListWidgetItem(e.text);
+        item->setData(Qt::UserRole, e.key);
         list->addItem(item);
     }
 }
@@ -205,11 +239,9 @@ void QtWidgetsApplication::onNodeListItemDoubleClicked(QListWidgetItem* item)
         save->setFilePath(path);
     }
     else if (show) {
-        // 只允许一个 ShowImage 输出到右侧预览：新的替换旧的
         if (m_activeShowNode && m_activeShowNode != show) {
             m_activeShowNode->clearDisplayCallback();
         }
-
         m_activeShowNode = show;
         show->setDisplayCallback([this](const cv::Mat& img) { displayImage(img); });
     }
@@ -217,7 +249,6 @@ void QtWidgetsApplication::onNodeListItemDoubleClicked(QListWidgetItem* item)
     auto* nodeItem = new NodeItem(typeName);
     nodeItem->setLogicNode(std::move(logicNode));
 
-    // 创建完立刻在右侧显示该节点参数
     BaseNode* rawNode = nodeItem->logicNode();
     showParametersForNode(rawNode);
 
@@ -234,14 +265,19 @@ void QtWidgetsApplication::clearPropertyPanel()
 {
     if (!m_propertyContent) return;
 
-    if (auto* oldLayout = m_propertyContent->layout()) {
-        QLayoutItem* child = nullptr;
-        while ((child = oldLayout->takeAt(0)) != nullptr) {
-            if (child->widget()) child->widget()->deleteLater();
-            delete child;
+    QLayout* layout = m_propertyContent->layout();
+    if (!layout) return;
+
+    // 循环删除所有子项，直到没有为止
+    QLayoutItem* child;
+    while ((child = layout->takeAt(0)) != nullptr) {
+        if (child->widget()) {
+            child->widget()->deleteLater();
         }
-        delete oldLayout;
+        delete child;
     }
+    delete layout;   // 删除旧的布局
+    m_propertyContent->setLayout(nullptr);
 }
 
 void QtWidgetsApplication::showParametersForNode(BaseNode* node)
@@ -277,13 +313,26 @@ void QtWidgetsApplication::showParametersForNode(BaseNode* node)
         return;
     }
 
+    const auto metas = node->getParameterMeta();
+
     for (auto it = params.begin(); it != params.end(); ++it) {
         const QString key = it.key();
         const QVariant val = it.value();
+        const auto metaIt = metas.find(key);
+        const ParameterMeta* meta = (metaIt != metas.end()) ? &metaIt.value() : nullptr;
 
         if (val.typeId() == QMetaType::Int) {
             auto* spin = new QSpinBox(m_propertyContent);
-            spin->setRange(-99999, 99999);
+
+            if (meta) {
+                spin->setRange(meta->minimum.toInt(), meta->maximum.toInt());
+                spin->setSingleStep(meta->singleStep.toInt());
+            } else {
+                spin->setRange(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+                spin->setSingleStep(1);
+            }
+
+            spin->setAccelerated(true);
             spin->setValue(val.toInt());
             form->addRow(key, spin);
 
@@ -295,8 +344,17 @@ void QtWidgetsApplication::showParametersForNode(BaseNode* node)
         }
         else if (val.typeId() == QMetaType::Double) {
             auto* spin = new QDoubleSpinBox(m_propertyContent);
-            spin->setRange(-99999, 99999);
+
+            if (meta) {
+                spin->setRange(meta->minimum.toDouble(), meta->maximum.toDouble());
+                spin->setSingleStep(meta->singleStep.toDouble());
+            } else {
+                spin->setRange(-1e9, 1e9);
+                spin->setSingleStep(0.1);
+            }
+
             spin->setDecimals(2);
+            spin->setAccelerated(true);
             spin->setValue(val.toDouble());
             form->addRow(key, spin);
 
@@ -332,4 +390,100 @@ void QtWidgetsApplication::showParametersForNode(BaseNode* node)
     m_propertyContent->update();
     m_propertyContent->updateGeometry();
     m_propertyContent->update();
+}
+void QtWidgetsApplication::saveWorkflow()
+{
+    WorkflowData data;
+    // 遍历 m_scene 中的节点和连接，填充 data
+    for (NodeItem* item : m_scene->nodes()) {  // 您需要在 NodeScene 中暴露 nodes()
+        NodeData nd;
+        nd.id = item->logicNode()->id();
+        nd.type = item->logicNode()->typeName();
+        nd.displayName = item->title();
+        nd.position = item->pos();
+        nd.parameters = item->logicNode()->getParameters();
+        data.nodes.append(nd);
+    }
+    for (Connection* conn : m_scene->connections()) {
+        ConnectionData cd;
+        cd.fromNodeId = conn->fromNode->logicNode()->id();
+        cd.outputPortIndex = conn->outputPortIndex;
+        cd.toNodeId = conn->toNode->logicNode()->id();
+        cd.inputPortIndex = conn->inputPortIndex;
+        data.connections.append(cd);
+    }
+    QString path = QFileDialog::getSaveFileName(this, "Save Workflow", "", "JSON (*.json)");
+    if (!path.isEmpty())
+        WorkflowSerializer::saveToFile(data, path);
+}
+
+void QtWidgetsApplication::loadWorkflow()
+{
+    QString path = QFileDialog::getOpenFileName(this, "Load Workflow", "", "JSON (*.json)");
+    if (path.isEmpty()) return;
+    WorkflowData data = WorkflowSerializer::loadFromFile(path);
+    if (data.nodes.isEmpty()) {
+        qDebug() << "Failed to load workflow or empty workflow.";
+        return;
+    }
+
+    // 清空当前场景
+    m_scene->clear();
+    // 清空旧的活动显示节点指针
+    if (m_activeShowNode) {
+        m_activeShowNode = nullptr;
+    }
+
+    // 1. 创建所有节点，并保存 id -> NodeItem 映射
+    QMap<QUuid, NodeItem*> nodeMap;
+    for (const NodeData& nd : data.nodes) {
+        auto logicNode = NodeFactory::instance().create(nd.type);
+        if (!logicNode) {
+            qDebug() << "Unknown node type:" << nd.type;
+            continue;
+        }
+        // 恢复参数
+        for (auto it = nd.parameters.begin(); it != nd.parameters.end(); ++it) {
+            logicNode->setParameter(it.key(), it.value());
+        }
+        // 特殊处理 ShowImageNode
+        if (auto* show = dynamic_cast<ShowImageNode*>(logicNode.get())) {
+            // 如果已有活动显示节点，清除其回调（理论上已经被清空，但安全起见）
+            if (m_activeShowNode) {
+                m_activeShowNode->clearDisplayCallback();
+            }
+            m_activeShowNode = show;
+            show->setDisplayCallback([this](const cv::Mat& img) { displayImage(img); });
+        }
+
+        auto* nodeItem = new NodeItem(nd.displayName);
+        nodeItem->setLogicNode(std::move(logicNode));
+        nodeItem->setPos(nd.position);
+        m_scene->addNode(nodeItem);
+        nodeMap[nd.id] = nodeItem;
+    }
+
+    // 2. 建立连接
+    for (const ConnectionData& cd : data.connections) {
+        NodeItem* fromNode = nodeMap.value(cd.fromNodeId);
+        NodeItem* toNode = nodeMap.value(cd.toNodeId);
+        if (!fromNode || !toNode) {
+            qDebug() << "Invalid connection: node not found";
+            continue;
+        }
+        NodePort* outPort = fromNode->getOutputPort(cd.outputPortIndex);
+        NodePort* inPort = toNode->getInputPort(cd.inputPortIndex);
+        if (outPort && inPort) {
+            m_scene->onConnectionRequest(outPort, inPort);
+        }
+        else {
+            qDebug() << "Failed to find ports for connection:"
+                << " from port" << cd.outputPortIndex
+                << " to port" << cd.inputPortIndex;
+        }
+    }
+
+    // 刷新视图
+    if (auto* view = findChild<QGraphicsView*>("graphicsView"))
+        view->update();
 }

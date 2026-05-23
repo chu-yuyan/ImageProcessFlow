@@ -44,8 +44,11 @@ void NodeScene::onConnectionRequest(NodePort* outputPort, NodePort* inputPort)
     line->updatePath();
 
     Connection* conn = new Connection(fromNode, fromIdx, toNode, toIdx, line);
-    addConnection(conn);
 
+    // 新增：反向指针
+    line->setConnection(conn);
+
+    addConnection(conn);
 }
 
 void NodeScene::addConnection(Connection* conn)
@@ -103,8 +106,15 @@ bool NodeScene::canConnect(NodeItem* fromNode, int outPort, NodeItem* toNode, in
 
     const auto fromPortType = fromNode->logicNode()->outputs()[outPort].type;
     const auto toPortType = toNode->logicNode()->inputs()[inPort].type;
-    if (fromPortType != toPortType) return false;
 
+    // 允许 Gray -> Color（ShowImage 输入是 Color 也允许接灰度）
+    const bool typeOk =
+        (fromPortType == toPortType) ||
+        (fromPortType == ImageType::Gray && toPortType == ImageType::Color);
+
+    if (!typeOk) return false;
+
+    // 不允许重复相同连接
     for (auto* conn : m_connections) {
         if (conn->fromNode == fromNode && conn->outputPortIndex == outPort &&
             conn->toNode == toNode && conn->inputPortIndex == inPort)
@@ -205,4 +215,71 @@ bool NodeScene::executeWorkflow()
     }
 
     return true;
+}
+
+void NodeScene::removeNode(NodeItem* node)
+{
+    if (!node) return;
+
+    // 新增：删除前通知外部清理引用
+    if (node->logicNode())
+        emit nodeAboutToBeRemoved(node->logicNode());
+
+    // 1) 先删掉所有关联连接（复制列表，避免遍历中修改）
+    QList<Connection*> toRemove;
+    for (auto* c : m_connections) {
+        if (!c) continue;
+        if (c->fromNode == node || c->toNode == node)
+            toRemove.append(c);
+    }
+    for (auto* c : toRemove)
+        removeConnection(c);
+
+    // 2) 从 m_nodes 移除并从场景移除/释放
+    m_nodes.removeOne(node);
+    removeItem(node);
+    delete node;
+}
+
+void NodeScene::deleteSelected()
+{
+    const auto selected = selectedItems();
+    if (selected.isEmpty()) return;
+
+    // 先删线，再删点（更稳）
+    QList<Connection*> connectionsToDelete;
+    QList<NodeItem*> nodesToDelete;
+
+    for (auto* item : selected) {
+        if (auto* line = dynamic_cast<NodeConnection*>(item)) {
+            if (auto* c = line->connection()) // 反向指针（见第③部分）
+                connectionsToDelete.append(c);
+        } else if (auto* node = dynamic_cast<NodeItem*>(item)) {
+            nodesToDelete.append(node);
+        }
+    }
+
+    // 去重（同一条线可能被重复加入）
+    connectionsToDelete = QList<Connection*>(QSet<Connection*>(connectionsToDelete.begin(), connectionsToDelete.end()).values());
+    nodesToDelete = QList<NodeItem*>(QSet<NodeItem*>(nodesToDelete.begin(), nodesToDelete.end()).values());
+
+    for (auto* c : connectionsToDelete)
+        removeConnection(c);
+
+    for (auto* n : nodesToDelete)
+        removeNode(n);
+
+    clearSelection();
+}
+
+void NodeScene::clear()
+{
+    // 先删除所有连接（deleteSelected 中已实现批量删除，但这里直接清空）
+    clearConnections();   // 已有的函数，会删除所有 Connection 对象并清空列表
+    // 删除所有节点
+    for (NodeItem* node : m_nodes) {
+        removeItem(node);
+        delete node;
+    }
+    m_nodes.clear();
 }

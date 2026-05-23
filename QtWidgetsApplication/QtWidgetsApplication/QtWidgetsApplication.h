@@ -9,12 +9,11 @@ class QListWidgetItem;
 class NodeScene;
 class QLabel;
 class BaseNode;
-class QFormLayout;
+class ShowImageNode;
 
 class QtWidgetsApplication : public QMainWindow
 {
     Q_OBJECT
-
 public:
     QtWidgetsApplication(QWidget* parent = nullptr);
     ~QtWidgetsApplication();
@@ -24,6 +23,10 @@ public:
 private slots:
     void onNodeListItemDoubleClicked(QListWidgetItem* item);
     void executeWorkflow();
+
+public slots:
+    void saveWorkflow();
+    void loadWorkflow();
 
 private:
     void initNodeList();
@@ -36,11 +39,11 @@ private:
     std::unique_ptr<NodeScene> m_scene;
 
     QLabel* m_previewLabel = nullptr;
-    QWidget* m_propertyPanel = nullptr;  // 右侧参数容器（ui里叫 widget）
-    QWidget* m_propertyContent = nullptr; // 参数面板真正承载控件的子 QWidget
+    QWidget* m_propertyPanel = nullptr;
+    QWidget* m_propertyContent = nullptr;
 
     BaseNode* m_currentNodeForProperties = nullptr;
 
-    // 解决多个 ShowImage：只允许一个 active
-    class ShowImageNode* m_activeShowNode = nullptr;
+    // 只允许一个 ShowImage 输出到预览：用指针，别用不存在的 id()
+    ShowImageNode* m_activeShowNode = nullptr;
 };

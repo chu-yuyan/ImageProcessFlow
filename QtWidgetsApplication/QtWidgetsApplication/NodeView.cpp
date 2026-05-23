@@ -1,15 +1,22 @@
 #include "NodeView.h"
+#include "NodeScene.h"
+#include "NodePort.h"
 #include <QMouseEvent>
 #include <QScrollBar>
 #include <QWheelEvent>
+#include <QKeyEvent>
 
 NodeView::NodeView(QWidget* parent) : QGraphicsView(parent)
 {
     setRenderHint(QPainter::Antialiasing, true);
-    setDragMode(QGraphicsView::RubberBandDrag);
+
+    m_defaultDragMode = QGraphicsView::RubberBandDrag;
+    setDragMode(m_defaultDragMode);
+
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setResizeAnchor(QGraphicsView::AnchorUnderMouse);
+    setFocusPolicy(Qt::StrongFocus);
 }
 
 void NodeView::wheelEvent(QWheelEvent* event)
@@ -33,6 +40,15 @@ void NodeView::mousePressEvent(QMouseEvent* event)
         event->accept();
         return;
     }
+
+    // 关键：如果点到端口，关闭 RubberBand，避免出现选框
+    auto* item = itemAt(event->pos());
+    if (dynamic_cast<NodePort*>(item) != nullptr) {
+        setDragMode(QGraphicsView::NoDrag);
+    } else {
+        setDragMode(m_defaultDragMode);
+    }
+
     QGraphicsView::mousePressEvent(event);
 }
 
@@ -44,6 +60,10 @@ void NodeView::mouseReleaseEvent(QMouseEvent* event)
         event->accept();
         return;
     }
+
+    // 松开恢复默认拖拽模式
+    setDragMode(m_defaultDragMode);
+
     QGraphicsView::mouseReleaseEvent(event);
 }
 
@@ -70,4 +90,16 @@ void NodeView::applyZoom(qreal factor)
     if (nextScale < kMinScale || nextScale > kMaxScale)
         return;
     scale(factor, factor);
+}
+
+void NodeView::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Delete) {
+        if (auto* sc = qobject_cast<NodeScene*>(scene())) {
+            sc->deleteSelected();
+            event->accept();
+            return;
+        }
+    }
+    QGraphicsView::keyPressEvent(event);
 }

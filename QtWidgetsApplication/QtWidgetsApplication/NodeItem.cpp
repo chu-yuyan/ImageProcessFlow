@@ -144,3 +144,25 @@ void NodeItem::createPorts()
         idx++;
     }
 }
+
+NodePort* NodeItem::getInputPort(int index) const
+{
+    for (auto* child : childItems()) {
+        if (auto* port = dynamic_cast<NodePort*>(child)) {
+            if (port->isInput() && port->index() == index)
+                return port;
+        }
+    }
+    return nullptr;
+}
+
+NodePort* NodeItem::getOutputPort(int index) const
+{
+    for (auto* child : childItems()) {
+        if (auto* port = dynamic_cast<NodePort*>(child)) {
+            if (!port->isInput() && port->index() == index)
+                return port;
+        }
+    }
+    return nullptr;
+}
