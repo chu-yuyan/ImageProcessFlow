@@ -30,8 +30,10 @@ void NodeScene::addNode(NodeItem* node)
 
 void NodeScene::onConnectionRequest(NodePort* outputPort, NodePort* inputPort)
 {
+
     NodeItem* fromNode = outputPort->parentNode();
     NodeItem* toNode = inputPort->parentNode();
+
     int fromIdx = outputPort->index();
     int toIdx = inputPort->index();
 
@@ -104,23 +106,25 @@ bool NodeScene::canConnect(NodeItem* fromNode, int outPort, NodeItem* toNode, in
     if (outPort < 0 || outPort >= fromNode->outputPortCount()) return false;
     if (inPort < 0 || inPort >= toNode->inputPortCount()) return false;
 
-    const auto fromPortType = fromNode->logicNode()->outputs()[outPort].type;
-    const auto toPortType = toNode->logicNode()->inputs()[inPort].type;
+    const auto fromType = fromNode->logicNode()->outputs()[outPort].type;
+    const auto toType = toNode->logicNode()->inputs()[inPort].type;
 
-    // 允许 Gray -> Color（ShowImage 输入是 Color 也允许接灰度）
-    const bool typeOk =
-        (fromPortType == toPortType) ||
-        (fromPortType == ImageType::Gray && toPortType == ImageType::Color);
+    // 如果目标端口是 Any（即 Sink 节点如 ShowImage/SaveImage），直接允许
+    if (toType == ImageType::Any)
+        return true;
 
-    if (!typeOk) return false;
+    // 其余原有规则（相同类型、Gray→Color、PixelGrid→PaletteIndexed 等）
+    if (fromType == toType) return true;
+    if (fromType == ImageType::Gray && toType == ImageType::Color) return true;
 
-    // 不允许重复相同连接
-    for (auto* conn : m_connections) {
-        if (conn->fromNode == fromNode && conn->outputPortIndex == outPort &&
-            conn->toNode == toNode && conn->inputPortIndex == inPort)
-            return false;
-    }
-    return true;
+    // 新增语义规则
+    if (fromType == ImageType::PixelGrid && toType == ImageType::PaletteIndexed) return true;
+    if (fromType == ImageType::PaletteIndexed && toType == ImageType::BeadPattern) return true;
+    if (fromType == ImageType::AlphaMasked && toType == ImageType::BeadPattern) return true;
+    if (fromType == ImageType::PixelGrid && toType == ImageType::BeadPattern) return true;
+
+    // 其它一律不允许
+    return false;
 }
 
 QList<NodeItem*> NodeScene::topologicalSort()

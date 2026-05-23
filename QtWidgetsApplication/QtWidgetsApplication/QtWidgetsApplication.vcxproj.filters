@@ -64,6 +64,9 @@
     <ClCompile Include="WorkflowExecutor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="nodes2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NodeItem.h">
@@ -96,6 +99,15 @@
     <ClInclude Include="WorkflowExecutor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="nodes2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImagePacket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="NodeScene.h">
@@ -107,5 +119,8 @@
     <QtMoc Include="nodecontroller.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="mard221.json" />
   </ItemGroup>
 </Project>

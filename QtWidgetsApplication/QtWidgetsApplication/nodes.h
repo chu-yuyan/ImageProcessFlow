@@ -1,60 +1,67 @@
 ﻿#pragma once
 #include "BaseNode.h"
+#include "ImagePacket.h"
 #include <QFileDialog>
 #include "NodeFactory.h"
+#include "nodes2.h"
 
 //加载图像
-class LoadImageNode : public BaseNode 
+class LoadImageNode : public BaseNode
 {
     QString m_filePath;
 public:
-    LoadImageNode() 
+    LoadImageNode()
     {
         m_name = "加载图像";
         m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
     }
 
     QString typeName() const override { return "LoadImage"; }
-    
-    void process() override 
+
+    void process() override
     {
-        if (m_filePath.isEmpty()) 
+        if (m_filePath.isEmpty())
         {
             qDebug() << "No file selected";
             return;
         }
         cv::Mat img = cv::imread(m_filePath.toStdString());
         if (img.empty()) return;
-        m_outputs[0].data = QVariant::fromValue(img);
+
+        ImagePacket packet(img, ImageType::Color);
+        m_outputs[0].data = QVariant::fromValue(packet);
     }
-    
+
     void setFilePath(const QString& path) { m_filePath = path; }
-    
+
     QMap<QString, QVariant> getParameters() const override { return { {"filePath", m_filePath} }; }
-    
-    void setParameter(const QString& name, const QVariant& value) override 
+
+    void setParameter(const QString& name, const QVariant& value) override
     {
         if (name == "filePath") m_filePath = value.toString();
     }
 };
 
 //保存图像
-class SaveImageNode : public BaseNode 
+class SaveImageNode : public BaseNode
 {
     QString m_filePath;
 public:
-    SaveImageNode() 
+    SaveImageNode()
     {
         m_name = "保存图像";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
     }
 
     QString typeName() const override { return "SaveImage"; }
-    
-    void process() override 
+
+    void process() override
     {
         if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
-        cv::Mat img = m_inputs[0].data.value<cv::Mat>();
+
+        auto packet = m_inputs[0].data.value<ImagePacket>();
+        const cv::Mat& img = packet.image;
+
         if (img.empty() || m_filePath.isEmpty()) return;
         cv::imwrite(m_filePath.toStdString(), img);
     }
@@ -62,27 +69,27 @@ public:
     void setFilePath(const QString& path) { m_filePath = path; }
     QMap<QString, QVariant> getParameters() const override { return { {"filePath", m_filePath} }; }
 
-    void setParameter(const QString& name, const QVariant& value) override 
+    void setParameter(const QString& name, const QVariant& value) override
     {
         if (name == "filePath") m_filePath = value.toString();
     }
 };
 
 //显示图片
-class ShowImageNode : public BaseNode 
+class ShowImageNode : public BaseNode
 {
     std::function<void(const cv::Mat&)> m_displayCallback;
 
 public:
-    ShowImageNode() 
+    ShowImageNode()
     {
         m_name = "显示图片";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
     }
 
     QString typeName() const override { return "ShowImage"; }
 
-    void setDisplayCallback(std::function<void(const cv::Mat&)> callback) 
+    void setDisplayCallback(std::function<void(const cv::Mat&)> callback)
     {
         m_displayCallback = callback;
     }
@@ -93,12 +100,15 @@ public:
         m_displayCallback = nullptr;
     }
 
-    void process() override 
+    void process() override
     {
         if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
-        cv::Mat img = m_inputs[0].data.value<cv::Mat>();
+
+        auto packet = m_inputs[0].data.value<ImagePacket>();
+        const cv::Mat& img = packet.image;
+
         if (img.empty()) return;
-        if (m_displayCallback) 
+        if (m_displayCallback)
         {
             m_displayCallback(img);
         }
@@ -106,11 +116,11 @@ public:
 };
 
 //亮度
-class BrightnessNode : public BaseNode 
+class BrightnessNode : public BaseNode
 {
     int m_brightness = 0;
 public:
-    BrightnessNode() 
+    BrightnessNode()
     {
         m_name = "亮度";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
@@ -132,31 +142,33 @@ public:
         return { {"brightness", meta} };
     }
 
-    void setParameter(const QString& name, const QVariant& value) override 
+    void setParameter(const QString& name, const QVariant& value) override
     {
         if (name == "brightness") m_brightness = value.toInt();
     }
 
-    void process() override 
+    void process() override
     {
         if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
-        cv::Mat src = m_inputs[0].data.value<cv::Mat>();
-        if (src.empty()) return;
+
+        auto packet = m_inputs[0].data.value<ImagePacket>();
+        if (packet.image.empty()) return;
+
         cv::Mat dst;
-        src.convertTo(dst, -1, 1, m_brightness);
-        m_outputs[0].data = QVariant::fromValue(dst);
+        packet.image.convertTo(dst, -1, 1, m_brightness);
+
+        ImagePacket out(dst, packet.type);
+        m_outputs[0].data = QVariant::fromValue(out);
     }
 };
 
-
-
 //高斯模糊
-class BlurNode : public BaseNode 
+class BlurNode : public BaseNode
 {
     int m_radius = 3;
 public:
 
-    BlurNode() 
+    BlurNode()
     {
         m_name = "高斯模糊";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
@@ -164,22 +176,26 @@ public:
     }
     QString typeName() const override { return "Blur"; }
 
-    void process() override 
+    void process() override
     {
         if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
-        cv::Mat src = m_inputs[0].data.value<cv::Mat>();
-        if (src.empty()) return;
+
+        auto packet = m_inputs[0].data.value<ImagePacket>();
+        if (packet.image.empty()) return;
+
         int ksize = m_radius * 2 + 1;
         cv::Mat dst;
-        cv::GaussianBlur(src, dst, cv::Size(ksize, ksize), 0);
-        m_outputs[0].data = QVariant::fromValue(dst);
+        cv::GaussianBlur(packet.image, dst, cv::Size(ksize, ksize), 0);
+
+        ImagePacket out(dst, packet.type);
+        m_outputs[0].data = QVariant::fromValue(out);
     }
 
     QMap<QString, QVariant> getParameters() const override
     {
         return { {"radius", m_radius} };
     }
-    void setParameter(const QString & name, const QVariant & value) override 
+    void setParameter(const QString& name, const QVariant& value) override
     {
         if (name == "radius") m_radius = value.toInt();
     }
@@ -196,37 +212,40 @@ public:
     }
 };
 
-
 //变成灰度
-class GrayNode : public BaseNode 
+class GrayNode : public BaseNode
 {
-    public:
-        GrayNode() 
-        {
-            m_name = "变成灰度";
-            m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
-            m_outputs.push_back({ "Image", ImageType::Gray, QVariant() });
-        }
+public:
+    GrayNode()
+    {
+        m_name = "变成灰度";
+        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_outputs.push_back({ "Image", ImageType::Gray, QVariant() });
+    }
 
-        QString typeName() const override { return "Gray"; }
-        void process() override 
-        {
-            if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
-            cv::Mat src = m_inputs[0].data.value<cv::Mat>();
-            if (src.empty()) return;
-            cv::Mat gray;
-            cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
-            m_outputs[0].data = QVariant::fromValue(gray);
-        }
+    QString typeName() const override { return "Gray"; }
+    void process() override
+    {
+        if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
+
+        auto packet = m_inputs[0].data.value<ImagePacket>();
+        if (packet.image.empty()) return;
+
+        cv::Mat gray;
+        cv::cvtColor(packet.image, gray, cv::COLOR_BGR2GRAY);
+
+        ImagePacket out(gray, ImageType::Gray);
+        m_outputs[0].data = QVariant::fromValue(out);
+    }
 };
 
 //调整大小
-class ResizeNode : public BaseNode 
+class ResizeNode : public BaseNode
 {
     int m_width = 400;
     int m_height = 400;
 public:
-    ResizeNode() 
+    ResizeNode()
     {
         m_name = "调整大小";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
@@ -256,20 +275,24 @@ public:
 
     void process() override {
         if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
-        cv::Mat src = m_inputs[0].data.value<cv::Mat>();
-        if (src.empty()) return;
+
+        auto packet = m_inputs[0].data.value<ImagePacket>();
+        if (packet.image.empty()) return;
+
         cv::Mat dst;
-        cv::resize(src, dst, cv::Size(m_width, m_height));
-        m_outputs[0].data = QVariant::fromValue(dst);
+        cv::resize(packet.image, dst, cv::Size(m_width, m_height));
+
+        ImagePacket out(dst, packet.type);
+        m_outputs[0].data = QVariant::fromValue(out);
     }
 };
 
 //旋转
-class RotateNode : public BaseNode 
+class RotateNode : public BaseNode
 {
     double m_angle = 0.0;
 public:
-    RotateNode() 
+    RotateNode()
     {
         m_name = "旋转";
         m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
@@ -277,22 +300,29 @@ public:
     }
     QString typeName() const override { return "Rotate"; }
 
-    void process() override 
+    void process() override
     {
         if (m_inputs.empty() || m_inputs[0].data.isNull()) return;
-        cv::Mat src = m_inputs[0].data.value<cv::Mat>();
-        if (src.empty()) return;
-        cv::Point2f center(src.cols / 2.0, src.rows / 2.0);
+
+        auto packet = m_inputs[0].data.value<ImagePacket>();
+        if (packet.image.empty()) return;
+
+        const cv::Mat& src = packet.image;
+
+        cv::Point2f center(src.cols / 2.0F, src.rows / 2.0F);
         cv::Mat rot = cv::getRotationMatrix2D(center, m_angle, 1.0);
-        cv::Rect2f bbox = cv::RotatedRect(center, src.size(), m_angle).boundingRect2f();
+        cv::Rect2f bbox = cv::RotatedRect(center, src.size(), static_cast<float>(m_angle)).boundingRect2f();
         rot.at<double>(0, 2) += bbox.width / 2.0 - center.x;
         rot.at<double>(1, 2) += bbox.height / 2.0 - center.y;
+
         cv::Mat dst;
         cv::warpAffine(src, dst, rot, bbox.size());
-        m_outputs[0].data = QVariant::fromValue(dst);
+
+        ImagePacket out(dst, packet.type);
+        m_outputs[0].data = QVariant::fromValue(out);
     }
     QMap<QString, QVariant> getParameters() const override { return { {"angle", m_angle} }; }
-    void setParameter(const QString& name, const QVariant& value) override 
+    void setParameter(const QString& name, const QVariant& value) override
     {
         if (name == "angle") m_angle = value.toDouble();
     }
@@ -309,7 +339,7 @@ public:
     }
 };
 
-static bool registerAllNodes() 
+static bool registerAllNodes()
 {
     NodeFactory& f = NodeFactory::instance();
     f.registerNode("LoadImage", []() { return std::make_unique<LoadImageNode>(); });
@@ -320,6 +350,12 @@ static bool registerAllNodes()
     f.registerNode("Gray", []() { return std::make_unique<GrayNode>(); });
     f.registerNode("Resize", []() { return std::make_unique<ResizeNode>(); });
     f.registerNode("Rotate", []() { return std::make_unique<RotateNode>(); });
+    f.registerNode("Crop", []() { return std::make_unique<CropNode>(); });
+    f.registerNode("Pixelate", []() { return std::make_unique<PixelateNode>(); });
+    f.registerNode("PaletteReduce", []() { return std::make_unique<PaletteReduceNode>(); });
+    f.registerNode("Dither", []() { return std::make_unique<DitherNode>(); });
+    f.registerNode("RemoveBackground", []() { return std::make_unique<RemoveBackgroundNode>(); });
+    f.registerNode("BeadPattern", []() { return std::make_unique<BeadPatternNode>(); });
     return true;
 }
 static bool _registered = registerAllNodes();

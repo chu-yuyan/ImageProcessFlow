@@ -7,13 +7,24 @@
 #include <opencv2/opencv.hpp>
 #include <QUuid>          // 新增
 
-enum class ImageType { Color, Gray, Pixel };
+enum class ImageType 
+{ 
+    Any,
+    Color, 
+    Gray, 
+    PixelGrid,      // 像素化后的离散网格图像（每个块代表一个“像素块”）
+    PaletteIndexed, // 索引色图像 + 调色板
+    AlphaMasked,    // RGBA 图像，带透明通道
+    BeadPattern     // 最终生成的拼豆图纸（可视化网格+色号） 
+};
 
 struct Port
 {
     QString name;
     ImageType type;
     QVariant data;
+
+
 };
 
 // 参数元数据

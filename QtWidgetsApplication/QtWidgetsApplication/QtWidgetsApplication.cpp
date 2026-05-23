@@ -199,7 +199,8 @@ void QtWidgetsApplication::initNodeList()
         QString text;  // UI 显示
     };
 
-    const QList<NodeEntry> entries = {
+    const QList<NodeEntry> entries = 
+    {
         { "LoadImage",   "加载图像" },
         { "SaveImage",   "保存图像" },
         { "ShowImage",   "显示图像" },
@@ -207,7 +208,13 @@ void QtWidgetsApplication::initNodeList()
         { "Blur",        "高斯模糊" },
         { "Gray",        "灰度化" },
         { "Resize",      "调整大小" },
-        { "Rotate",      "旋转" }
+        { "Rotate",      "旋转" },
+        { "Crop",           "裁剪" },
+        { "Pixelate",       "像素化" },
+        { "PaletteReduce",  "颜色限制" },
+        { "Dither",         "抖动" },
+        { "RemoveBackground","AI抠图" },
+        { "BeadPattern",    "拼豆图纸" }
     };
 
     for (const auto& e : entries) {

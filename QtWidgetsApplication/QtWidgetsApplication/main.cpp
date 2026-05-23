@@ -5,9 +5,12 @@
 #include "WorkflowSerializer.h"
 #include "WorkflowExecutor.h"
 #include <QtWidgets/QApplication>
+#include "ImagePacket.h"
 
 int main(int argc, char* argv[])
 {
+    qRegisterMetaType<ImagePacket>();
+
     // 先解析命令行，判断是否使用 --no-gui
     QCommandLineParser parser;
     parser.addHelpOption();
@@ -26,6 +29,7 @@ int main(int argc, char* argv[])
     if (noGui && !workflowPath.isEmpty()) {
         // 命令行模式：使用 QCoreApplication
         QCoreApplication app(argc, argv);
+        qRegisterMetaType<ImagePacket>();
         WorkflowData data = WorkflowSerializer::loadFromFile(workflowPath);
         if (data.nodes.isEmpty()) {
             qDebug() << "Failed to load workflow file:" << workflowPath;
@@ -37,6 +41,7 @@ int main(int argc, char* argv[])
     else {
         // 正常 GUI 模式
         QApplication app(argc, argv);
+        qRegisterMetaType<ImagePacket>();
         QtWidgetsApplication window;
         window.show();
         return app.exec();

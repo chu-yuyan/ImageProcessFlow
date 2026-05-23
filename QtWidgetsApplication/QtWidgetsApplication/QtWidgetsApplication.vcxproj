@@ -37,12 +37,12 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>Qt 6.8.6</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtModules>core;gui;network;widgets</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>Qt 6.8.6</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtModules>core;gui;network;widgets</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -106,6 +106,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="nodes2.cpp" />
     <ClCompile Include="WorkflowExecutor.cpp" />
     <ClCompile Include="WorkflowSerializer.cpp" />
     <QtRcc Include="QtWidgetsApplication.qrc" />
@@ -122,8 +123,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseNode.h" />
+    <ClInclude Include="config.h" />
     <ClInclude Include="connection.h" />
+    <ClInclude Include="ImagePacket.h" />
     <ClInclude Include="nodeconnection.h" />
+    <ClInclude Include="nodes2.h" />
     <ClInclude Include="WorkflowData.h" />
     <ClInclude Include="WorkflowExecutor.h" />
     <ClInclude Include="WorkflowSerializer.h" />
@@ -134,6 +138,9 @@
     <ClInclude Include="nodes.h" />
     <QtMoc Include="NodeScene.h" />
     <QtMoc Include="NodeView.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="mard221.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

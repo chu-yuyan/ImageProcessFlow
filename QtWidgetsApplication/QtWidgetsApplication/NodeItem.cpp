@@ -137,7 +137,15 @@ void NodeItem::createPorts()
     idx = 0;
     for (const auto& port : m_logicNode->outputs()) {
         PortInfo info;
-        info.type = (port.type == ImageType::Color) ? "Color" : "Gray";
+        switch (port.type) {
+        case ImageType::Color: info.type = "Color"; break;
+        case ImageType::Gray: info.type = "Gray"; break;
+        case ImageType::PixelGrid: info.type = "PixelGrid"; break;
+        case ImageType::PaletteIndexed: info.type = "Palette"; break;
+        case ImageType::AlphaMasked: info.type = "RGBA"; break;
+        case ImageType::BeadPattern: info.type = "Bead"; break;
+        default: info.type = "Any";
+        }
         info.color = QColor(200, 150, 100);
         NodePort* p = new NodePort(this, info, false, idx);
         p->setPos(kWidth, (idx + 0.5) * kHeight / m_logicNode->outputs().size());
