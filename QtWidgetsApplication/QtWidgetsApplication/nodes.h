@@ -123,8 +123,8 @@ public:
     BrightnessNode()
     {
         m_name = "亮度";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
-        m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
+        m_outputs.push_back({ "Image", ImageType::Any, QVariant() });
     }
 
     QString typeName() const override { return "Brightness"; }
@@ -171,8 +171,8 @@ public:
     BlurNode()
     {
         m_name = "高斯模糊";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
-        m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
+        m_outputs.push_back({ "Image", ImageType::Any, QVariant() });
     }
     QString typeName() const override { return "Blur"; }
 
@@ -219,7 +219,7 @@ public:
     GrayNode()
     {
         m_name = "变成灰度";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
         m_outputs.push_back({ "Image", ImageType::Gray, QVariant() });
     }
 
@@ -248,8 +248,8 @@ public:
     ResizeNode()
     {
         m_name = "调整大小";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
-        m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
+        m_outputs.push_back({ "Image", ImageType::Any, QVariant() });
     }
 
     QString typeName() const override { return "Resize"; }
@@ -264,7 +264,6 @@ public:
         meta.maximum = 4096;
         meta.singleStep = 10;
         meta.defaultValue = 400;
-
         return { {"width", meta}, {"height", meta} };
     }
 
@@ -282,11 +281,10 @@ public:
         cv::Mat dst;
         cv::resize(packet.image, dst, cv::Size(m_width, m_height));
 
-        ImagePacket out(dst, packet.type);
+        ImagePacket out(dst, packet.type);  // 保持原类型
         m_outputs[0].data = QVariant::fromValue(out);
     }
 };
-
 //旋转
 class RotateNode : public BaseNode
 {
@@ -295,9 +293,10 @@ public:
     RotateNode()
     {
         m_name = "旋转";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
-        m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
+        m_outputs.push_back({ "Image", ImageType::Any, QVariant() });
     }
+
     QString typeName() const override { return "Rotate"; }
 
     void process() override
@@ -318,10 +317,12 @@ public:
         cv::Mat dst;
         cv::warpAffine(src, dst, rot, bbox.size());
 
-        ImagePacket out(dst, packet.type);
+        ImagePacket out(dst, packet.type);  // 保持原类型
         m_outputs[0].data = QVariant::fromValue(out);
     }
+
     QMap<QString, QVariant> getParameters() const override { return { {"angle", m_angle} }; }
+
     void setParameter(const QString& name, const QVariant& value) override
     {
         if (name == "angle") m_angle = value.toDouble();
@@ -356,6 +357,7 @@ static bool registerAllNodes()
     f.registerNode("Dither", []() { return std::make_unique<DitherNode>(); });
     f.registerNode("RemoveBackground", []() { return std::make_unique<RemoveBackgroundNode>(); });
     f.registerNode("BeadPattern", []() { return std::make_unique<BeadPatternNode>(); });
+    f.registerNode("AlphaToAny", []() { return std::make_unique<AlphaToAnyNode>(); });
     return true;
 }
 static bool _registered = registerAllNodes();

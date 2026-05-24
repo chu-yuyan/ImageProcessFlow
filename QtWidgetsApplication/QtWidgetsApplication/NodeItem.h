@@ -7,8 +7,6 @@
 #include <QPointF>
 #include <memory>
 #include "NodePort.h"
-
-
 #include "BaseNode.h"
 
 class NodeItem : public QGraphicsItem
@@ -20,7 +18,8 @@ public:
 
     int type() const override { return Type; }
 
-    QRectF boundingRect() const override;
+    QRectF boundingRect() const override { return m_boundingRect; }  // 返回成员变量
+
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 
     QString title() const { return m_title; }
@@ -37,6 +36,7 @@ public:
 
     void updateConnections();
     void createPorts();
+    void updateBoundingRect();  // 新增：更新节点大小
 
     NodePort* getInputPort(int index) const;
     NodePort* getOutputPort(int index) const;
@@ -51,6 +51,9 @@ private:
     static constexpr qreal kWidth = 160.0;
     static constexpr qreal kHeight = 80.0;
     static constexpr qreal kRadius = 8.0;
+    static constexpr qreal kPortSpacing = 25.0;  // 每个端口占用的高度
+
+    QRectF m_boundingRect{ 0, 0, kWidth, kHeight };  // 可变的 boundingRect
 
     std::unique_ptr<BaseNode> m_logicNode;
 };

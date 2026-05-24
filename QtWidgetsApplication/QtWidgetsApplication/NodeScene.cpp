@@ -109,21 +109,14 @@ bool NodeScene::canConnect(NodeItem* fromNode, int outPort, NodeItem* toNode, in
     const auto fromType = fromNode->logicNode()->outputs()[outPort].type;
     const auto toType = toNode->logicNode()->inputs()[inPort].type;
 
-    // 如果目标端口是 Any（即 Sink 节点如 ShowImage/SaveImage），直接允许
+    // Any 输入端口允许任何连接
     if (toType == ImageType::Any)
         return true;
 
-    // 其余原有规则（相同类型、Gray→Color、PixelGrid→PaletteIndexed 等）
-    if (fromType == toType) return true;
-    if (fromType == ImageType::Gray && toType == ImageType::Color) return true;
+    // 完全相同类型允许
+    if (fromType == toType)
+        return true;
 
-    // 新增语义规则
-    if (fromType == ImageType::PixelGrid && toType == ImageType::PaletteIndexed) return true;
-    if (fromType == ImageType::PaletteIndexed && toType == ImageType::BeadPattern) return true;
-    if (fromType == ImageType::AlphaMasked && toType == ImageType::BeadPattern) return true;
-    if (fromType == ImageType::PixelGrid && toType == ImageType::BeadPattern) return true;
-
-    // 其它一律不允许
     return false;
 }
 

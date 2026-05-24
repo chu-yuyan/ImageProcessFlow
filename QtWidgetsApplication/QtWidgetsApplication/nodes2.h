@@ -19,28 +19,36 @@ class CropNode : public BaseNode {
 public:
     CropNode() {
         m_name = "裁剪";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
-        m_outputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
+        m_outputs.push_back({ "Image", ImageType::Any, QVariant() });
     }
+
     QString typeName() const override { return "Crop"; }
+
     void process() override {
         auto packet = m_inputs[0].data.value<ImagePacket>();
         if (packet.image.empty()) return;
+
         cv::Rect roi(cv::Point(m_x, m_y), cv::Size(m_w, m_h));
         roi &= cv::Rect(0, 0, packet.image.cols, packet.image.rows);
+
         ImagePacket out = packet;
         out.image = packet.image(roi).clone();
+        // type 保持原类型
         m_outputs[0].data = QVariant::fromValue(out);
     }
+
     QMap<QString, QVariant> getParameters() const override {
-        return { {"x", m_x}, {"y", m_y}, {"width", m_w}, {"height", m_h} };
+        return { {"起始x", m_x}, {"起始y", m_y}, {"宽", m_w}, {"高", m_h} };
     }
+
     void setParameter(const QString& name, const QVariant& value) override {
-        if (name == "x") m_x = value.toInt();
-        else if (name == "y") m_y = value.toInt();
-        else if (name == "width") m_w = value.toInt();
-        else if (name == "height") m_h = value.toInt();
+        if (name == "起始x") m_x = value.toInt();
+        else if (name == "起始y") m_y = value.toInt();
+        else if (name == "宽") m_w = value.toInt();
+        else if (name == "高") m_h = value.toInt();
     }
+
     QMap<QString, ParameterMeta> getParameterMeta() const override {
         ParameterMeta meta;
         meta.typeId = QMetaType::Int;
@@ -48,34 +56,46 @@ public:
         meta.maximum = 4096;
         meta.singleStep = 1;
         meta.defaultValue = 100;
-        return { {"x", meta}, {"y", meta}, {"width", meta}, {"height", meta} };
+        return { {"起始x", meta}, {"起始y", meta}, {"宽", meta}, {"高", meta} };
     }
 };
 
-
 // 2. 像素化节点（输出 PixelGrid）
-
 class PixelateNode : public BaseNode {
     int m_blockSize = 8;
 public:
     PixelateNode() {
         m_name = "像素化";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });  // 改为 Any
         m_outputs.push_back({ "PixelGrid", ImageType::PixelGrid, QVariant() });
     }
+
     QString typeName() const override { return "Pixelate"; }
+
     void process() override {
         auto packet = m_inputs[0].data.value<ImagePacket>();
         cv::Mat src = packet.image;
         if (src.empty()) return;
-        int w = src.cols, h = src.rows;
+
+        // 如果是 RGBA，先转 BGR
+        cv::Mat srcBGR;
+        if (src.channels() == 4) {
+            cv::cvtColor(src, srcBGR, cv::COLOR_BGRA2BGR);
+        }
+        else {
+            srcBGR = src;
+        }
+
+        int w = srcBGR.cols, h = srcBGR.rows;
         int bw = std::max(1, w / m_blockSize);
         int bh = std::max(1, h / m_blockSize);
+
+        // 缩小到网格尺寸
         cv::Mat small;
-        cv::resize(src, small, cv::Size(bw, bh), 0, 0, cv::INTER_LINEAR);
-        cv::Mat result;
-        cv::resize(small, result, cv::Size(w, h), 0, 0, cv::INTER_NEAREST);
-        ImagePacket out(result, ImageType::PixelGrid);
+        cv::resize(srcBGR, small, cv::Size(bw, bh), 0, 0, cv::INTER_LINEAR);
+
+        // 输出网格图像（每个像素代表一个格子）
+        ImagePacket out(small, ImageType::PixelGrid);
         out.pixelBlockSize = m_blockSize;
         m_outputs[0].data = QVariant::fromValue(out);
     }
@@ -96,50 +116,18 @@ public:
 
 
 // 3. 调色板限制节点（输出 PaletteIndexed）
-
 class PaletteReduceNode : public BaseNode {
     QString m_paletteName = "GameBoy";
     QVector<cv::Vec3b> m_palette;
     QVector<QString> m_colorCodes;   // 新增：色号列表
 
-    void loadPalette(const QString& name) {
-        m_palette.clear();
-        m_colorCodes.clear();
-        if (name == "GameBoy") {
-            m_palette = { {0x0F,0x38,0x0F}, {0x30,0x62,0x30}, {0x8B,0xAC,0x0F}, {0x9B,0xBC,0x0F} };
-            m_colorCodes = { "Dark", "Mid", "Light", "Lighter" };
-        }
-        else if (name == "BlackWhite") {
-            m_palette = { {0,0,0}, {255,255,255} };
-            m_colorCodes = { "Black", "White" };
-        }
-        else if (name == "Mard221") {
-            QFile file("mard221.json");
-            if (!file.open(QIODevice::ReadOnly)) {
-                qDebug() << "Failed to open mard221.json, using GameBoy fallback";
-                loadPalette("GameBoy");
-                return;
-            }
-            QByteArray data = file.readAll();
-            QJsonDocument doc = QJsonDocument::fromJson(data);
-            QJsonObject root = doc.object();
-            QJsonArray colors = root["colors"].toArray();
-            for (const QJsonValue& val : colors) {
-                QJsonObject obj = val.toObject();
-                QString code = obj["code"].toString();
-                QJsonArray rgbArr = obj["rgb"].toArray();
-                cv::Vec3b rgb(rgbArr[0].toInt(), rgbArr[1].toInt(), rgbArr[2].toInt());
-                m_palette.push_back(rgb);
-                m_colorCodes.push_back(code);
-            }
-            qDebug() << "Loaded Mard221 palette with" << m_palette.size() << "colors";
-        }
-    }
+    void loadPalette(const QString& name);
+
 
 public:
     PaletteReduceNode() {
         m_name = "颜色限制";
-        m_inputs.push_back({ "PixelGrid", ImageType::PixelGrid, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
         m_outputs.push_back({ "Indexed", ImageType::PaletteIndexed, QVariant() });
         loadPalette("GameBoy");
     }
@@ -200,16 +188,7 @@ public:
         m_outputs.push_back({ "Indexed", ImageType::PaletteIndexed, QVariant() });
     }
     QString typeName() const override { return "Dither"; }
-    void process() override {
-        auto packet = m_inputs[0].data.value<ImagePacket>();
-        if (packet.type != ImageType::PaletteIndexed || packet.image.empty()) return;
-        cv::Mat src = packet.image; // CV_8UC1 索引图
-        cv::Mat dst = src.clone();
-        // Floyd-Steinberg 简化实现（只做误差扩散，颜色不变）
-        // 真实抖动需知道调色板 RGB，此处为演示仅拷贝
-        // 完整实现可参考网上代码
-        m_outputs[0].data = QVariant::fromValue(packet);
-    }
+    void process() override;
 };
 
 
@@ -221,7 +200,7 @@ class RemoveBackgroundNode : public BaseNode {
 public:
     RemoveBackgroundNode() {
         m_name = "AI抠图";
-        m_inputs.push_back({ "Image", ImageType::Color, QVariant() });
+        m_inputs.push_back({ "Image", ImageType::Any, QVariant() });
         m_outputs.push_back({ "RGBA", ImageType::AlphaMasked, QVariant() });
         m_apiKey = AppConfig::removeBgApiKey();   // <-- 从 config.h 读取 Key
     }
@@ -234,45 +213,121 @@ public:
 };
 
 
-// 6. 拼豆图纸节点（接受 PixelGrid 或 PaletteIndexed，输出 BeadPattern）
-
+// 6. 拼豆图纸节点（接受 PixelGrid，内部使用 Mard221 调色板显示色号）
 class BeadPatternNode : public BaseNode {
     int m_cellSize = 20;
     int m_fontSize = 10;
     bool m_showColor = true;
-    cv::Mat drawGridFromRGB(const cv::Mat& rgb, int cellSize, int fontSize, bool showColor);
-    cv::Mat drawGridFromIndexed(const ImagePacket& packet, int cellSize, int fontSize, bool showColor);
+
+    // Mard221 调色板（硬编码，不依赖外部 JSON）
+    QVector<cv::Vec3b> m_palette;
+    QVector<QString> m_colorCodes;
+
+    void initMard221Palette() {
+        m_palette.clear();
+        m_colorCodes.clear();
+
+        // 直接从 JSON 数据中提取的部分常用色（完整版可以从文件加载）
+        // 或者保留从 mard221.json 加载的逻辑
+        QFile file("mard221.json");
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray data = file.readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            QJsonObject root = doc.object();
+            QJsonArray colors = root["colors"].toArray();
+            for (const QJsonValue& val : colors) {
+                QJsonObject obj = val.toObject();
+                QString code = obj["code"].toString();
+                QJsonArray rgbArr = obj["rgb"].toArray();
+                const int r = rgbArr.size() > 0 ? rgbArr[0].toInt() : 0;
+                const int g = rgbArr.size() > 1 ? rgbArr[1].toInt() : 0;
+                const int b = rgbArr.size() > 2 ? rgbArr[2].toInt() : 0;
+                m_palette.push_back(cv::Vec3b(b, g, r));  // BGR
+                m_colorCodes.push_back(code);
+            }
+            qDebug() << "Loaded Mard221 palette with" << m_palette.size() << "colors";
+        }
+        else {
+            // 如果找不到文件，使用 GameBoy 作为后备
+            qDebug() << "Failed to open mard221.json, using GameBoy fallback";
+            m_palette = { {0x0F,0x38,0x0F}, {0x30,0x62,0x30}, {0x8B,0xAC,0x0F}, {0x9B,0xBC,0x0F} };
+            m_colorCodes = { "Dark", "Mid", "Light", "Lighter" };
+        }
+    }
+
 public:
     BeadPatternNode() {
         m_name = "拼豆图纸";
         m_inputs.push_back({ "Grid", ImageType::PixelGrid, QVariant() });
         m_outputs.push_back({ "Pattern", ImageType::BeadPattern, QVariant() });
+        m_cellSize = 40;  // 从20改为40
+        m_fontSize = 14;  // 从10改为14
+        initMard221Palette();
     }
+
     QString typeName() const override { return "BeadPattern"; }
-    void process() override {
-        auto packet = m_inputs[0].data.value<ImagePacket>();
-        if (packet.image.empty()) return;
-        cv::Mat canvas;
-        if (packet.type == ImageType::PixelGrid) {
-            canvas = drawGridFromRGB(packet.image, m_cellSize, m_fontSize, m_showColor);
-        }
-        else if (packet.type == ImageType::PaletteIndexed) {
-            canvas = drawGridFromIndexed(packet, m_cellSize, m_fontSize, m_showColor);
-        }
-        else {
-            qDebug() << "BeadPatternNode: unsupported input type";
-            return;
-        }
-        ImagePacket out(canvas, ImageType::BeadPattern);
-        m_outputs[0].data = QVariant::fromValue(out);
-    }
+
+    void process() override;
+
     QMap<QString, QVariant> getParameters() const override {
         return { {"cellSize", m_cellSize}, {"fontSize", m_fontSize}, {"showColor", m_showColor} };
     }
+
     void setParameter(const QString& name, const QVariant& value) override {
         if (name == "cellSize") m_cellSize = value.toInt();
         else if (name == "fontSize") m_fontSize = value.toInt();
         else if (name == "showColor") m_showColor = value.toBool();
     }
-};
 
+    QMap<QString, ParameterMeta> getParameterMeta() const override {
+        ParameterMeta cellMeta;
+        cellMeta.typeId = QMetaType::Int;
+        cellMeta.minimum = 10;
+        cellMeta.maximum = 100;
+        cellMeta.singleStep = 1;
+        cellMeta.defaultValue = 20;
+
+        ParameterMeta fontMeta;
+        fontMeta.typeId = QMetaType::Int;
+        fontMeta.minimum = 6;
+        fontMeta.maximum = 30;
+        fontMeta.singleStep = 1;
+        fontMeta.defaultValue = 10;
+
+        return { {"cellSize", cellMeta}, {"fontSize", fontMeta} };
+    }
+};
+// 7. AlphaMasked 转 Any 节点（RGBA -> BGR）
+class AlphaToAnyNode : public BaseNode {
+public:
+    AlphaToAnyNode() {
+        m_name = "Alpha转RGB";
+        m_inputs.push_back({ "RGBA", ImageType::AlphaMasked, QVariant() });
+        m_outputs.push_back({ "Image", ImageType::Any, QVariant() });
+    }
+
+    QString typeName() const override { return "AlphaToAny"; }
+
+    void process() override {
+        auto packet = m_inputs[0].data.value<ImagePacket>();
+        if (packet.image.empty()) return;
+
+        cv::Mat result;
+
+        if (packet.type == ImageType::AlphaMasked && packet.image.channels() == 4) {
+            // RGBA 转 BGR
+            cv::cvtColor(packet.image, result, cv::COLOR_BGRA2BGR);
+        }
+        else if (packet.image.channels() == 3) {
+            // 已经是 BGR，直接复制
+            result = packet.image.clone();
+        }
+        else {
+            qDebug() << "AlphaToAnyNode: unsupported channels" << packet.image.channels();
+            return;
+        }
+
+        ImagePacket out(result, ImageType::Any);
+        m_outputs[0].data = QVariant::fromValue(out);
+    }
+};

@@ -26,21 +26,158 @@
 #include <QCheckBox>
 #include <QLayoutItem>
 #include <limits>
+#include <QComboBox>
+#include<qevent.h>
+
+// ========== ZoomableImageView 实现 ==========
+ZoomableImageView::ZoomableImageView(QWidget* parent) : QWidget(parent) {
+    setMinimumSize(100, 100);
+    setStyleSheet("background-color: #2a2a2a;");
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+}
+
+void ZoomableImageView::setImage(const cv::Mat& image) {
+    m_image = image.clone();
+    if (m_fitToView) {
+        fitToView();
+    }
+    updatePixmap();
+    update();
+}
+
+void ZoomableImageView::updatePixmap() {
+    if (m_image.empty()) {
+        m_pixmap = QPixmap();
+        return;
+    }
+
+    // 确保是连续内存
+    cv::Mat src = m_image;
+    if (!src.isContinuous()) {
+        src = src.clone();
+    }
+
+    if (src.channels() == 3) {  // BGR
+        cv::Mat rgb;
+        cv::cvtColor(src, rgb, cv::COLOR_BGR2RGB);
+        QImage qimg(rgb.data, rgb.cols, rgb.rows,
+            static_cast<int>(rgb.step),
+            QImage::Format_RGB888);
+        m_pixmap = QPixmap::fromImage(qimg);
+    }
+    else if (src.channels() == 1) {  // Gray
+        QImage qimg(src.data, src.cols, src.rows,
+            static_cast<int>(src.step),
+            QImage::Format_Grayscale8);
+        m_pixmap = QPixmap::fromImage(qimg);
+    }
+    else if (src.channels() == 4) {  // BGRA
+        cv::Mat rgba;
+        cv::cvtColor(src, rgba, cv::COLOR_BGRA2RGBA);
+        QImage qimg(rgba.data, rgba.cols, rgba.rows,
+            static_cast<int>(rgba.step),
+            QImage::Format_RGBA8888);
+        m_pixmap = QPixmap::fromImage(qimg);
+    }
+    else {
+        m_pixmap = QPixmap();
+        return;
+    }
+
+    // 应用缩放
+    if (!m_pixmap.isNull() && m_zoom != 1.0) {
+        QSize newSize = m_pixmap.size() * m_zoom;
+        m_pixmap = m_pixmap.scaled(newSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    }
+}
+
+void ZoomableImageView::paintEvent(QPaintEvent* event) {
+    QPainter painter(this);
+    painter.fillRect(rect(), QColor(42, 42, 42));
+
+    if (m_pixmap.isNull()) {
+        painter.setPen(QColor(150, 150, 150));
+        painter.drawText(rect(), Qt::AlignCenter, "No Image");
+        return;
+    }
+
+    // 居中显示
+    QPoint pos((width() - m_pixmap.width()) / 2, (height() - m_pixmap.height()) / 2);
+    painter.drawPixmap(pos, m_pixmap);
+
+    // 绘制边框
+    painter.setPen(QPen(QColor(80, 80, 80), 1));
+    painter.drawRect(QRect(pos, m_pixmap.size()));
+}
+
+void ZoomableImageView::wheelEvent(QWheelEvent* event) {
+    m_fitToView = false;
+    if (event->angleDelta().y() > 0) {
+        zoomIn();
+    }
+    else {
+        zoomOut();
+    }
+    updatePixmap();
+    update();
+    event->accept();
+}
+
+void ZoomableImageView::resizeEvent(QResizeEvent* event) {
+    if (m_fitToView) {
+        fitToView();
+    }
+    QWidget::resizeEvent(event);
+}
+
+void ZoomableImageView::zoomIn() {
+    m_zoom *= 1.15;
+    m_zoom = qMin(m_zoom, 5.0);
+}
+
+void ZoomableImageView::zoomOut() {
+    m_zoom /= 1.15;
+    m_zoom = qMax(m_zoom, 0.1);
+}
+
+void ZoomableImageView::fitToView() {
+    if (m_image.empty()) return;
+
+    qreal scaleX = (qreal)width() / m_image.cols;
+    qreal scaleY = (qreal)height() / m_image.rows;
+    m_zoom = qMin(scaleX, scaleY);
+    m_zoom = qMax(m_zoom, 0.1);
+    m_fitToView = true;
+    updatePixmap();
+}
 
 QtWidgetsApplication::QtWidgetsApplication(QWidget* parent)
     : QMainWindow(parent)
 {
     ui.setupUi(this);
 
-    // 从 UI 中获取控件
-    m_previewLabel = findChild<QLabel*>("previewLabel");
-    if (!m_previewLabel) {
-        qDebug() << "Error: previewLabel not found!";
+    // 替换 previewLabel 为 ZoomableImageView
+    QWidget* rightWidget = findChild<QWidget*>("rightWidget");
+    if (rightWidget && rightWidget->layout()) {
+        QVBoxLayout* layout = qobject_cast<QVBoxLayout*>(rightWidget->layout());
+        if (layout) {
+            QLabel* originalLabel = findChild<QLabel*>("previewLabel");
+            if (originalLabel) {
+                layout->removeWidget(originalLabel);
+                originalLabel->hide();
+                originalLabel->deleteLater();
+            }
+
+            m_imageView = new ZoomableImageView(rightWidget);
+            layout->insertWidget(0, m_imageView);
+            layout->setStretch(0, 1);
+        }
     }
-    else {
-        m_previewLabel->setAlignment(Qt::AlignCenter);
-        m_previewLabel->setScaledContents(true);
+
+    if (!m_imageView) {
+        m_imageView = new ZoomableImageView(this);
     }
+
 
     m_propertyPanel = findChild<QWidget*>("propertyPanel");
     if (!m_propertyPanel) {
@@ -117,31 +254,14 @@ QtWidgetsApplication::~QtWidgetsApplication() = default;
 
 void QtWidgetsApplication::displayImage(const cv::Mat& image)
 {
-    if (!m_previewLabel) return;
+    if (!m_imageView) return;
 
-    // 关键：把 UI 更新投递到 GUI 线程
     cv::Mat imgCopy = image.clone();
-    QMetaObject::invokeMethod(this, [this, imgCopy]() mutable {
-        if (!m_previewLabel) return;
-
-        if (imgCopy.empty()) {
-            m_previewLabel->clear();
-            m_previewLabel->setText("No Image");
-            return;
+    QMetaObject::invokeMethod(this, [this, imgCopy]() {
+        if (m_imageView) {
+            m_imageView->setImage(imgCopy);
         }
-
-        cv::Mat rgb;
-        if (imgCopy.channels() == 3) {
-            cv::cvtColor(imgCopy, rgb, cv::COLOR_BGR2RGB);
-            QImage qimg(rgb.data, rgb.cols, rgb.rows, static_cast<int>(rgb.step), QImage::Format_RGB888);
-            m_previewLabel->setPixmap(QPixmap::fromImage(qimg.copy()));
-        } else if (imgCopy.channels() == 1) {
-            QImage qimg(imgCopy.data, imgCopy.cols, imgCopy.rows, static_cast<int>(imgCopy.step), QImage::Format_Grayscale8);
-            m_previewLabel->setPixmap(QPixmap::fromImage(qimg.copy()));
-        } else {
-            m_previewLabel->setText("Unsupported image format");
-        }
-    }, Qt::QueuedConnection);
+        }, Qt::QueuedConnection);
 }
 
 void QtWidgetsApplication::executeWorkflow()
@@ -214,7 +334,8 @@ void QtWidgetsApplication::initNodeList()
         { "PaletteReduce",  "颜色限制" },
         { "Dither",         "抖动" },
         { "RemoveBackground","AI抠图" },
-        { "BeadPattern",    "拼豆图纸" }
+        { "BeadPattern",    "拼豆图纸" },
+        { "AlphaToAny",  "Alpha转RGB" }
     };
 
     for (const auto& e : entries) {
@@ -382,15 +503,49 @@ void QtWidgetsApplication::showParametersForNode(BaseNode* node)
                             m_currentNodeForProperties->setParameter(key, v);
                     });
         }
-        else {
-            auto* edit = new QLineEdit(val.toString(), m_propertyContent);
-            form->addRow(key, edit);
+        else if (key == "paletteName") {
+            struct PaletteInfo {
+                QString id;
+                QString displayName;
+            };
 
-            connect(edit, &QLineEdit::editingFinished,
-                    this, [this, key, edit]() {
-                        if (m_currentNodeForProperties)
-                            m_currentNodeForProperties->setParameter(key, edit->text());
-                    });
+            const auto paletteInfos = []() -> QVector<PaletteInfo> {
+                return {
+                    { "GameBoy",      "Game Boy" },
+                    { "BlackWhite",   "黑白双色" },
+                    { "CGA",          "CGA 经典四色" },
+                    { "EGA",          "EGA 16色" },
+                    { "PICO8",        "PICO-8 像素风" },
+                    { "Commodore64",  "Commodore 64" },
+                    { "Arne16",       "Arne 16色" },
+                    { "Endesga32",    "Endesga 32色" },
+                    { "AAP-64",       "AAP-64 调色板" },
+                    { "Mard221",      "马尔德 221色拼豆" }
+                };
+                };
+
+            auto* combo = new QComboBox(m_propertyContent);
+
+            for (const auto& p : paletteInfos()) {
+                combo->addItem(p.displayName, p.id);  // 存储内部 ID 在 UserData
+            }
+
+            const QString currentId = val.toString();
+            int idx = combo->findData(currentId);
+            if (idx < 0) idx = combo->findData(QStringLiteral("GameBoy"));
+            if (idx < 0) idx = 0;
+            combo->setCurrentIndex(idx);
+
+            form->addRow(key, combo);
+
+            // 修改这里：使用 currentData 而不是 currentText
+            connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+                this, [this, combo, key](int index) {
+                    if (m_currentNodeForProperties && index >= 0) {
+                        QString id = combo->itemData(index).toString();
+                        m_currentNodeForProperties->setParameter(key, id);
+                    }
+                });
         }
     }
 
