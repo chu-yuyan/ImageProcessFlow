@@ -354,7 +354,9 @@ void RemoveBackgroundNode::process()
             m_outputs[0].data = QVariant::fromValue(packet);
         }
     } else {
-        qDebug() << "RemoveBackgroundNode API error:" << reply->errorString();
+        qDebug() << "RemoveBackgroundNode API error:" << reply->errorString()
+                 << "httpStatus=" << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()
+                 << "body=" << reply->readAll();
         m_outputs[0].data = QVariant::fromValue(packet);
     }
     reply->deleteLater();
@@ -369,17 +371,17 @@ void BeadPatternNode::process() {
         return;
     }
 
+    // 清空上次统计
+    m_colorCounts.clear();
+
     cv::Mat src = packet.image;
     int rows = src.rows;
     int cols = src.cols;
     int cellW = m_cellSize;
     int cellH = m_cellSize;
 
-    // 自动计算字体大小：格子大小的 35-40%
     int actualFontSize = std::max(8, std::min(m_fontSize, (int)(m_cellSize * 0.4)));
     double fontScale = actualFontSize / 20.0;
-
-    // 设置文字粗细
     int fontThickness = std::max(1, actualFontSize / 10);
 
     cv::Mat canvas(rows * cellW, cols * cellH, CV_8UC3, cv::Scalar(255, 255, 255));
@@ -392,7 +394,6 @@ void BeadPatternNode::process() {
 
             cv::Vec3b color = src.at<cv::Vec3b>(r, c);
 
-            // 画颜色块
             if (m_showColor) {
                 cv::rectangle(canvas, cellRect, cv::Scalar(color[0], color[1], color[2]), cv::FILLED);
             }
@@ -401,7 +402,7 @@ void BeadPatternNode::process() {
                 cv::rectangle(canvas, cellRect, cv::Scalar(0, 0, 0), 1);
             }
 
-            // 找最接近的调色板颜色，获取色号
+            // 找最接近的调色板颜色
             int bestIdx = 0;
             int bestDist = INT_MAX;
             for (int i = 0; i < m_palette.size(); ++i) {
@@ -416,20 +417,19 @@ void BeadPatternNode::process() {
             }
 
             QString code = (bestIdx >= 0 && bestIdx < m_colorCodes.size()) ? m_colorCodes[bestIdx] : "?";
+            // 统计颜色使用次数
+            m_colorCounts[code]++;
 
-            // 如果文字太长，只显示前3个字符 + "."
             std::string text = code.toStdString();
             int maxChars = cellW / (actualFontSize * 0.6);
             if (text.length() > maxChars && maxChars >= 3) {
                 text = text.substr(0, maxChars - 1) + ".";
             }
 
-            // 计算文字位置（居中）
             int baseline = 0;
             cv::Size textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX,
                 fontScale, fontThickness, &baseline);
 
-            // 如果文字还是太大，再次缩小
             if (textSize.width > cellW - 4) {
                 fontScale = (cellW - 4) * 1.0 / textSize.width * fontScale;
                 textSize = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX,
@@ -439,11 +439,9 @@ void BeadPatternNode::process() {
             cv::Point textOrg(x + (cellW - textSize.width) / 2,
                 y + (cellH + textSize.height) / 2);
 
-            // 根据背景亮度决定文字颜色（更精确的亮度计算）
             int brightness = 0.299 * color[2] + 0.587 * color[1] + 0.114 * color[0];
             cv::Scalar textColor = (brightness < 128) ? cv::Scalar(255, 255, 255) : cv::Scalar(0, 0, 0);
 
-            // 使用 LINE_AA 抗锯齿
             cv::putText(canvas, text, textOrg, cv::FONT_HERSHEY_SIMPLEX,
                 fontScale, textColor, fontThickness, cv::LINE_AA);
         }

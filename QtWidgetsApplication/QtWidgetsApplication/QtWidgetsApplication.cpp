@@ -272,6 +272,26 @@ void QtWidgetsApplication::executeWorkflow()
     bool success = m_scene->executeWorkflow();
     ui.logTextEd->append(success ? "Workflow executed successfully."
                                 : "Execution failed: maybe cyclic dependency or missing data.");
+    if (success) {
+        for (NodeItem* item : m_scene->nodes()) {
+            BaseNode* logic = item->logicNode();
+            if (logic && logic->typeName() == "BeadPattern") {
+                BeadPatternNode* bead = dynamic_cast<BeadPatternNode*>(logic);
+                if (bead) {
+                    const auto& counts = bead->getColorCounts();
+                    if (counts.isEmpty()) {
+                        ui.logTextEd->append("BeadPatternNode: No colors used.");
+                    }
+                    else {
+                        ui.logTextEd->append("BeadPatternNode color usage:");
+                        for (auto it = counts.begin(); it != counts.end(); ++it) {
+                            ui.logTextEd->append(QString("  %1 : %2 个").arg(it.key()).arg(it.value()));
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 void QtWidgetsApplication::initSceneAndView()

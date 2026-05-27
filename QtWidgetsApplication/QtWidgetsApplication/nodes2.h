@@ -219,16 +219,17 @@ class BeadPatternNode : public BaseNode {
     int m_fontSize = 10;
     bool m_showColor = true;
 
-    // Mard221 调色板（硬编码，不依赖外部 JSON）
+    // Mard221 调色板
     QVector<cv::Vec3b> m_palette;
     QVector<QString> m_colorCodes;
+
+    // 颜色统计
+    QMap<QString, int> m_colorCounts;
 
     void initMard221Palette() {
         m_palette.clear();
         m_colorCodes.clear();
 
-        // 直接从 JSON 数据中提取的部分常用色（完整版可以从文件加载）
-        // 或者保留从 mard221.json 加载的逻辑
         QFile file("mard221.json");
         if (file.open(QIODevice::ReadOnly)) {
             QByteArray data = file.readAll();
@@ -248,7 +249,6 @@ class BeadPatternNode : public BaseNode {
             qDebug() << "Loaded Mard221 palette with" << m_palette.size() << "colors";
         }
         else {
-            // 如果找不到文件，使用 GameBoy 作为后备
             qDebug() << "Failed to open mard221.json, using GameBoy fallback";
             m_palette = { {0x0F,0x38,0x0F}, {0x30,0x62,0x30}, {0x8B,0xAC,0x0F}, {0x9B,0xBC,0x0F} };
             m_colorCodes = { "Dark", "Mid", "Light", "Lighter" };
@@ -260,14 +260,17 @@ public:
         m_name = "拼豆图纸";
         m_inputs.push_back({ "Grid", ImageType::PixelGrid, QVariant() });
         m_outputs.push_back({ "Pattern", ImageType::BeadPattern, QVariant() });
-        m_cellSize = 40;  // 从20改为40
-        m_fontSize = 14;  // 从10改为14
+        m_cellSize = 40;
+        m_fontSize = 14;
         initMard221Palette();
     }
 
     QString typeName() const override { return "BeadPattern"; }
 
     void process() override;
+
+    // 获取颜色统计结果
+    const QMap<QString, int>& getColorCounts() const { return m_colorCounts; }
 
     QMap<QString, QVariant> getParameters() const override {
         return { {"cellSize", m_cellSize}, {"fontSize", m_fontSize}, {"showColor", m_showColor} };

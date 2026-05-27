@@ -1,0 +1,64 @@
+{
+    "connections": [
+        {
+            "fromNodeId": "{9063b188-346d-4a1e-9586-8a1a2e2f992c}",
+            "fromPort": 0,
+            "toNodeId": "{80a7190b-6589-455d-860e-6f73253211c7}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{37053fdf-4f71-41d3-b3dd-4ce8961edf58}",
+            "fromPort": 0,
+            "toNodeId": "{9063b188-346d-4a1e-9586-8a1a2e2f992c}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{c5e1f346-ddba-4af4-81f1-872a67ecb64e}",
+            "fromPort": 0,
+            "toNodeId": "{9063b188-346d-4a1e-9586-8a1a2e2f992c}",
+            "toPort": 1
+        }
+    ],
+    "nodes": [
+        {
+            "displayName": "显示图片",
+            "id": "{80a7190b-6589-455d-860e-6f73253211c7}",
+            "parameters": {
+            },
+            "posX": -319,
+            "posY": -496,
+            "type": "ShowImage"
+        },
+        {
+            "displayName": "图像比对",
+            "id": "{9063b188-346d-4a1e-9586-8a1a2e2f992c}",
+            "parameters": {
+                "blendRatio": 0.5,
+                "mergeMode": "Blend"
+            },
+            "posX": -511,
+            "posY": -442,
+            "type": "MergeImage"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{c5e1f346-ddba-4af4-81f1-872a67ecb64e}",
+            "parameters": {
+                "filePath": "D:/高程作业/高程大作业/节点式图像处理/期末大作业/QtWidgetsApplication/babycat.jpg"
+            },
+            "posX": -752,
+            "posY": -365,
+            "type": "LoadImage"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{37053fdf-4f71-41d3-b3dd-4ce8961edf58}",
+            "parameters": {
+                "filePath": "D:/高程作业/高程大作业/节点式图像处理/期末大作业/QtWidgetsApplication/beautifulcat.jpg"
+            },
+            "posX": -769,
+            "posY": -528,
+            "type": "LoadImage"
+        }
+    ]
+}

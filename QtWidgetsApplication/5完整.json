@@ -1,0 +1,144 @@
+{
+    "connections": [
+        {
+            "fromNodeId": "{132866fa-bec4-4048-9ce5-b2c7ffd90ae3}",
+            "fromPort": 0,
+            "toNodeId": "{605c9d6d-8066-4fc1-bea1-19dc20c37b7b}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{605c9d6d-8066-4fc1-bea1-19dc20c37b7b}",
+            "fromPort": 0,
+            "toNodeId": "{8e6fa085-f46c-4be7-b9e0-b2f8e02cfffe}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{f067dbac-e24b-4b11-8361-656fe157b371}",
+            "fromPort": 0,
+            "toNodeId": "{a0048776-ce02-4070-9144-d520c3643e5d}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{a0048776-ce02-4070-9144-d520c3643e5d}",
+            "fromPort": 0,
+            "toNodeId": "{7fd617aa-9e7c-4115-a1d6-31daa7c4af9c}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{7fd617aa-9e7c-4115-a1d6-31daa7c4af9c}",
+            "fromPort": 0,
+            "toNodeId": "{efa10e85-3638-45e3-8ae6-dcbb660f3482}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{efa10e85-3638-45e3-8ae6-dcbb660f3482}",
+            "fromPort": 0,
+            "toNodeId": "{132866fa-bec4-4048-9ce5-b2c7ffd90ae3}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{07e74dde-0278-42e5-9c0c-7c0021ec5f8a}",
+            "fromPort": 0,
+            "toNodeId": "{f067dbac-e24b-4b11-8361-656fe157b371}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{a8afd159-1ceb-4915-a131-a034aaf1dc5d}",
+            "fromPort": 0,
+            "toNodeId": "{07e74dde-0278-42e5-9c0c-7c0021ec5f8a}",
+            "toPort": 0
+        }
+    ],
+    "nodes": [
+        {
+            "displayName": "像素化",
+            "id": "{132866fa-bec4-4048-9ce5-b2c7ffd90ae3}",
+            "parameters": {
+                "blockSize": 4
+            },
+            "posX": -288,
+            "posY": -156,
+            "type": "Pixelate"
+        },
+        {
+            "displayName": "拼豆图纸",
+            "id": "{605c9d6d-8066-4fc1-bea1-19dc20c37b7b}",
+            "parameters": {
+                "cellSize": 40,
+                "fontSize": 14,
+                "showColor": true
+            },
+            "posX": -256,
+            "posY": -401,
+            "type": "BeadPattern"
+        },
+        {
+            "displayName": "显示图片",
+            "id": "{8e6fa085-f46c-4be7-b9e0-b2f8e02cfffe}",
+            "parameters": {
+            },
+            "posX": -230,
+            "posY": -620,
+            "type": "ShowImage"
+        },
+        {
+            "displayName": "AI抠图",
+            "id": "{f067dbac-e24b-4b11-8361-656fe157b371}",
+            "parameters": {
+                "apiKey": "ruse8jDxahnJNP5SkKESGAx9"
+            },
+            "posX": -738,
+            "posY": -506,
+            "type": "RemoveBackground"
+        },
+        {
+            "displayName": "Alpha转RGB",
+            "id": "{a0048776-ce02-4070-9144-d520c3643e5d}",
+            "parameters": {
+            },
+            "posX": -712,
+            "posY": -384,
+            "type": "AlphaToAny"
+        },
+        {
+            "displayName": "颜色限制",
+            "id": "{7fd617aa-9e7c-4115-a1d6-31daa7c4af9c}",
+            "parameters": {
+                "paletteName": "AAP-64"
+            },
+            "posX": -657,
+            "posY": -266,
+            "type": "PaletteReduce"
+        },
+        {
+            "displayName": "抖动",
+            "id": "{efa10e85-3638-45e3-8ae6-dcbb660f3482}",
+            "parameters": {
+            },
+            "posX": -488,
+            "posY": -153,
+            "type": "Dither"
+        },
+        {
+            "displayName": "调整大小",
+            "id": "{07e74dde-0278-42e5-9c0c-7c0021ec5f8a}",
+            "parameters": {
+                "height": 400,
+                "width": 250
+            },
+            "posX": -479,
+            "posY": -647,
+            "type": "Resize"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{a8afd159-1ceb-4915-a131-a034aaf1dc5d}",
+            "parameters": {
+                "filePath": "D:/高程作业/高程大作业/节点式图像处理/期末大作业/QtWidgetsApplication/beautifulcat.jpg"
+            },
+            "posX": -795,
+            "posY": -649,
+            "type": "LoadImage"
+        }
+    ]
+}

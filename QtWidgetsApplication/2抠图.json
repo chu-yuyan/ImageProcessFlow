@@ -1,0 +1,62 @@
+{
+    "connections": [
+        {
+            "fromNodeId": "{37c2e918-8d93-4ac4-bdbf-caf22e43d6e2}",
+            "fromPort": 0,
+            "toNodeId": "{273c89ec-4686-483b-bca3-8b55f17a0e3e}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{273c89ec-4686-483b-bca3-8b55f17a0e3e}",
+            "fromPort": 0,
+            "toNodeId": "{94436123-e762-41e7-9a64-3365e5441636}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{cf422f92-7737-4846-808b-c3460d9e349f}",
+            "fromPort": 0,
+            "toNodeId": "{37c2e918-8d93-4ac4-bdbf-caf22e43d6e2}",
+            "toPort": 0
+        }
+    ],
+    "nodes": [
+        {
+            "displayName": "AI抠图",
+            "id": "{37c2e918-8d93-4ac4-bdbf-caf22e43d6e2}",
+            "parameters": {
+                "apiKey": "ruse8jDxahnJNP5SkKESGAx9"
+            },
+            "posX": -682,
+            "posY": -339,
+            "type": "RemoveBackground"
+        },
+        {
+            "displayName": "Alpha转RGB",
+            "id": "{273c89ec-4686-483b-bca3-8b55f17a0e3e}",
+            "parameters": {
+            },
+            "posX": -410,
+            "posY": -311,
+            "type": "AlphaToAny"
+        },
+        {
+            "displayName": "显示图片",
+            "id": "{94436123-e762-41e7-9a64-3365e5441636}",
+            "parameters": {
+            },
+            "posX": -319,
+            "posY": -496,
+            "type": "ShowImage"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{cf422f92-7737-4846-808b-c3460d9e349f}",
+            "parameters": {
+                "filePath": "D:/高程作业/高程大作业/节点式图像处理/期末大作业/QtWidgetsApplication/beautifulcat.jpg"
+            },
+            "posX": -753,
+            "posY": -575,
+            "type": "LoadImage"
+        }
+    ]
+}

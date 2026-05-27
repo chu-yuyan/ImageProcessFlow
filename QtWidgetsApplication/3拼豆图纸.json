@@ -1,0 +1,65 @@
+{
+    "connections": [
+        {
+            "fromNodeId": "{7efd5555-6c5f-4269-adea-48dfa12d7a5b}",
+            "fromPort": 0,
+            "toNodeId": "{b32a894b-2721-45c8-aaee-d3fd1321bbc9}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{b32a894b-2721-45c8-aaee-d3fd1321bbc9}",
+            "fromPort": 0,
+            "toNodeId": "{8260e6c0-0817-4b1f-889a-dfcf96e3bf4d}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{47f10e25-f828-46d6-9e49-6b211bcc7b7b}",
+            "fromPort": 0,
+            "toNodeId": "{7efd5555-6c5f-4269-adea-48dfa12d7a5b}",
+            "toPort": 0
+        }
+    ],
+    "nodes": [
+        {
+            "displayName": "像素化",
+            "id": "{7efd5555-6c5f-4269-adea-48dfa12d7a5b}",
+            "parameters": {
+                "blockSize": 13
+            },
+            "posX": -698,
+            "posY": -338,
+            "type": "Pixelate"
+        },
+        {
+            "displayName": "拼豆图纸",
+            "id": "{b32a894b-2721-45c8-aaee-d3fd1321bbc9}",
+            "parameters": {
+                "cellSize": 40,
+                "fontSize": 14,
+                "showColor": true
+            },
+            "posX": -423,
+            "posY": -321,
+            "type": "BeadPattern"
+        },
+        {
+            "displayName": "显示图片",
+            "id": "{8260e6c0-0817-4b1f-889a-dfcf96e3bf4d}",
+            "parameters": {
+            },
+            "posX": -301,
+            "posY": -471,
+            "type": "ShowImage"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{47f10e25-f828-46d6-9e49-6b211bcc7b7b}",
+            "parameters": {
+                "filePath": "D:/高程作业/高程大作业/节点式图像处理/期末大作业/QtWidgetsApplication/test.jpg"
+            },
+            "posX": -788,
+            "posY": -596,
+            "type": "LoadImage"
+        }
+    ]
+}

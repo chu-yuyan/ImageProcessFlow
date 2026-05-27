@@ -5,6 +5,12 @@
 #include "NodeFactory.h"
 #include "nodes2.h"
 
+#include <QFile>
+#include <QFileInfo>
+#include <QByteArray>
+#include <QDebug>
+#include <vector>
+
 //加载图像
 class LoadImageNode : public BaseNode
 {
@@ -25,10 +31,40 @@ public:
             qDebug() << "No file selected";
             return;
         }
-        cv::Mat img = cv::imread(m_filePath.toStdString());
-        if (img.empty()) return;
+
+        // 使用 QFile 读取二进制数据，再用 cv::imdecode 解码，避免 toStdString 导致的中文路径问题
+        QFile file(m_filePath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Failed to open file for reading:" << m_filePath;
+            return;
+        }
+        QByteArray data = file.readAll();
+        file.close();
+
+        if (data.isEmpty()) {
+            qWarning() << "File is empty or failed to read:" << m_filePath;
+            return;
+        }
+
+        std::vector<uchar> buf;
+        buf.assign(reinterpret_cast<const uchar*>(data.constData()),
+                   reinterpret_cast<const uchar*>(data.constData()) + data.size());
+
+        cv::Mat img;
+        try {
+            img = cv::imdecode(buf, cv::IMREAD_UNCHANGED);
+        } catch (const cv::Exception &e) {
+            qWarning() << "imdecode failed:" << e.what();
+            return;
+        }
+
+        if (img.empty()) {
+            qWarning() << "Failed to decode image:" << m_filePath;
+            return;
+        }
 
         ImagePacket packet(img, ImageType::Color);
+        packet.hasAlpha = (img.channels() == 4);
         m_outputs[0].data = QVariant::fromValue(packet);
     }
 
@@ -63,7 +99,48 @@ public:
         const cv::Mat& img = packet.image;
 
         if (img.empty() || m_filePath.isEmpty()) return;
-        cv::imwrite(m_filePath.toStdString(), img);
+
+        // 使用 cv::imencode 将图像编码到内存，再使用 QFile 写入磁盘。
+        // 这样可以避免在 Windows 上传递窄字符串路径给底层 CRT/Win32 API 导致的中文路径问题。
+        QString ext = QFileInfo(m_filePath).suffix().toLower();
+        if (ext.isEmpty()) ext = "png"; // 默认 png
+
+        std::string fmt = "." + ext.toStdString();
+        std::vector<uchar> buf;
+        std::vector<int> params;
+
+        if (ext == "jpg" || ext == "jpeg") {
+            params.push_back(cv::IMWRITE_JPEG_QUALITY);
+            params.push_back(95);
+        } else if (ext == "png") {
+            params.push_back(cv::IMWRITE_PNG_COMPRESSION);
+            params.push_back(3);
+        }
+
+        bool ok = false;
+        try {
+            ok = cv::imencode(fmt, img, buf, params);
+        } catch (const cv::Exception &e) {
+            qWarning() << "imencode failed:" << e.what();
+            ok = false;
+        }
+
+        if (!ok || buf.empty()) {
+            qWarning() << "Failed to encode image for saving:" << m_filePath;
+            return;
+        }
+
+        QByteArray bytes(reinterpret_cast<const char*>(buf.data()), static_cast<int>(buf.size()));
+        QFile file(m_filePath);
+        if (!file.open(QIODevice::WriteOnly)) {
+            qWarning() << "Failed to open file for writing:" << m_filePath;
+            return;
+        }
+        qint64 written = file.write(bytes);
+        if (written != bytes.size()) {
+            qWarning() << "Failed to write full image bytes to:" << m_filePath;
+        }
+        file.close();
     }
 
     void setFilePath(const QString& path) { m_filePath = path; }
