@@ -335,7 +335,8 @@ void QtWidgetsApplication::initNodeList()
         { "Dither",         "抖动" },
         { "RemoveBackground","AI抠图" },
         { "BeadPattern",    "拼豆图纸" },
-        { "AlphaToAny",  "Alpha转RGB" }
+        { "AlphaToAny",  "Alpha转RGB" },
+        { "MergeImage", "图像比对" }
     };
 
     for (const auto& e : entries) {

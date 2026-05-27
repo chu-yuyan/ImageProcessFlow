@@ -314,7 +314,7 @@ void RemoveBackgroundNode::process()
     QTimer timer;
     timer.setSingleShot(true);
     QObject::connect(&timer, &QTimer::timeout, reply, &QNetworkReply::abort);
-    timer.start(10000);
+    timer.start(30000);
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
 

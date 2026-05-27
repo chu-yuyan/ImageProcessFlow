@@ -358,6 +358,7 @@ static bool registerAllNodes()
     f.registerNode("RemoveBackground", []() { return std::make_unique<RemoveBackgroundNode>(); });
     f.registerNode("BeadPattern", []() { return std::make_unique<BeadPatternNode>(); });
     f.registerNode("AlphaToAny", []() { return std::make_unique<AlphaToAnyNode>(); });
+    f.registerNode("MergeImage", []() { return std::make_unique<MergeImageNode>(); });
     return true;
 }
 static bool _registered = registerAllNodes();

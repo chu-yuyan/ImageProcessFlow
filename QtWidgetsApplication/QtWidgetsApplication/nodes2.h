@@ -331,3 +331,98 @@ public:
         m_outputs[0].data = QVariant::fromValue(out);
     }
 };
+
+//汇合
+class MergeImageNode : public BaseNode {
+    double m_blendRatio = 0.5;
+    QString m_mergeMode = "Blend";
+
+    // 辅助函数：统一图像格式
+    cv::Mat normalizeImage(const cv::Mat& src) {
+        cv::Mat dst;
+        if (src.channels() == 1) {
+            cv::cvtColor(src, dst, cv::COLOR_GRAY2BGR);
+        }
+        else if (src.channels() == 4) {
+            cv::cvtColor(src, dst, cv::COLOR_BGRA2BGR);
+        }
+        else {
+            dst = src.clone();
+        }
+        return dst;
+    }
+
+public:
+    MergeImageNode() {
+        m_name = "图像比对";
+        m_inputs.push_back({ "Image A", ImageType::Any, QVariant() });
+        m_inputs.push_back({ "Image B", ImageType::Any, QVariant() });
+        m_outputs.push_back({ "Merged", ImageType::Any, QVariant() });
+    }
+
+    QString typeName() const override { return "MergeImage"; }
+
+    void process() override {
+        if (m_inputs.size() < 2) return;
+
+        auto packetA = m_inputs[0].data.value<ImagePacket>();
+        auto packetB = m_inputs[1].data.value<ImagePacket>();
+
+        qDebug() << "=== MergeImageNode Debug ===";
+        qDebug() << "Input A empty:" << packetA.image.empty()
+            << "size:" << packetA.image.cols << "x" << packetA.image.rows;
+        qDebug() << "Input B empty:" << packetB.image.empty()
+            << "size:" << packetB.image.cols << "x" << packetB.image.rows;
+
+        if (packetA.image.empty() || packetB.image.empty()) {
+            qDebug() << "One input is empty!";
+            return;
+        }
+
+        // 1. 统一通道数（转3通道BGR）
+        cv::Mat imgA = normalizeImage(packetA.image);
+        cv::Mat imgB = normalizeImage(packetB.image);
+
+        // 2. 统一尺寸（取较小尺寸）
+        if (imgA.size() != imgB.size()) {
+            cv::Size targetSize(
+                std::min(imgA.cols, imgB.cols),
+                std::min(imgA.rows, imgB.rows)
+            );
+            if (imgA.size() != targetSize) {
+                cv::resize(imgA, imgA, targetSize);
+            }
+            if (imgB.size() != targetSize) {
+                cv::resize(imgB, imgB, targetSize);
+            }
+        }
+
+        cv::Mat result;
+
+        if (m_mergeMode == "Blend") {
+            cv::addWeighted(imgA, m_blendRatio, imgB, 1 - m_blendRatio, 0, result);
+        }
+        else if (m_mergeMode == "Max") {
+            cv::max(imgA, imgB, result);
+        }
+        else if (m_mergeMode == "Min") {
+            cv::min(imgA, imgB, result);
+        }
+        else if (m_mergeMode == "Average") {
+            cv::add(imgA, imgB, result);
+            result = result / 2;
+        }
+
+        ImagePacket out(result, ImageType::Color);  // 输出统一为Color类型
+        m_outputs[0].data = QVariant::fromValue(out);
+    }
+
+    QMap<QString, QVariant> getParameters() const override {
+        return { {"blendRatio", m_blendRatio}, {"mergeMode", m_mergeMode} };
+    }
+
+    void setParameter(const QString& name, const QVariant& value) override {
+        if (name == "blendRatio") m_blendRatio = value.toDouble();
+        else if (name == "mergeMode") m_mergeMode = value.toString();
+    }
+};
