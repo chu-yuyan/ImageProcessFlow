@@ -40,7 +40,7 @@ struct ParameterMeta
 class BaseNode
 {
 protected:
-    QUuid m_id{ QUuid::createUuid() };   // 新增唯一ID
+    QUuid m_id{ QUuid::createUuid() };
     QString m_name;
 
     QList<Port> m_inputs;
@@ -51,7 +51,7 @@ public:
     virtual void process() = 0;
     virtual QString typeName() const = 0;
 
-    QUuid id() const { return m_id; }    // 新增
+    QUuid id() const { return m_id; }
 
     virtual QMap<QString, QVariant> getParameters() const { return {}; }
     virtual void setParameter(const QString& name, const QVariant& value) {}

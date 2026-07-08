@@ -1,0 +1,144 @@
+{
+    "connections": [
+        {
+            "fromNodeId": "{204b28c4-8bf9-436f-abf8-977179b4c8ce}",
+            "fromPort": 0,
+            "toNodeId": "{b2769d98-b88e-40a7-9e28-b37ac1228229}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{b2769d98-b88e-40a7-9e28-b37ac1228229}",
+            "fromPort": 0,
+            "toNodeId": "{053b062a-7526-45c6-9f95-25f433633baf}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{aeb98cd5-a9a4-411d-b20c-2976c9fa6212}",
+            "fromPort": 0,
+            "toNodeId": "{4be51de0-f866-4533-99c2-4f4bb16bf7bc}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{4be51de0-f866-4533-99c2-4f4bb16bf7bc}",
+            "fromPort": 0,
+            "toNodeId": "{1f75005b-7661-43bd-ad6c-6893e5911a92}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{1f75005b-7661-43bd-ad6c-6893e5911a92}",
+            "fromPort": 0,
+            "toNodeId": "{58a370c5-8ba0-4d37-aa72-207dbbe81179}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{58a370c5-8ba0-4d37-aa72-207dbbe81179}",
+            "fromPort": 0,
+            "toNodeId": "{204b28c4-8bf9-436f-abf8-977179b4c8ce}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{88acad4e-057b-4ef9-9b03-3a00b0c6a799}",
+            "fromPort": 0,
+            "toNodeId": "{0372730a-0695-4222-91e2-d37706997851}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{0372730a-0695-4222-91e2-d37706997851}",
+            "fromPort": 0,
+            "toNodeId": "{aeb98cd5-a9a4-411d-b20c-2976c9fa6212}",
+            "toPort": 0
+        }
+    ],
+    "nodes": [
+        {
+            "displayName": "像素化",
+            "id": "{204b28c4-8bf9-436f-abf8-977179b4c8ce}",
+            "parameters": {
+                "blockSize": 4
+            },
+            "posX": -288,
+            "posY": -156,
+            "type": "Pixelate"
+        },
+        {
+            "displayName": "拼豆图纸",
+            "id": "{b2769d98-b88e-40a7-9e28-b37ac1228229}",
+            "parameters": {
+                "cellSize": 40,
+                "fontSize": 14,
+                "showColor": true
+            },
+            "posX": -256,
+            "posY": -401,
+            "type": "BeadPattern"
+        },
+        {
+            "displayName": "显示图片",
+            "id": "{053b062a-7526-45c6-9f95-25f433633baf}",
+            "parameters": {
+            },
+            "posX": -230,
+            "posY": -620,
+            "type": "ShowImage"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{88acad4e-057b-4ef9-9b03-3a00b0c6a799}",
+            "parameters": {
+                "filePath": "D:/beautifulcat.jpg"
+            },
+            "posX": -756,
+            "posY": -640,
+            "type": "LoadImage"
+        },
+        {
+            "displayName": "AI抠图",
+            "id": "{aeb98cd5-a9a4-411d-b20c-2976c9fa6212}",
+            "parameters": {
+                "apiKey": "ruse8jDxahnJNP5SkKESGAx9"
+            },
+            "posX": -749,
+            "posY": -535,
+            "type": "RemoveBackground"
+        },
+        {
+            "displayName": "Alpha转RGB",
+            "id": "{4be51de0-f866-4533-99c2-4f4bb16bf7bc}",
+            "parameters": {
+            },
+            "posX": -712,
+            "posY": -384,
+            "type": "AlphaToAny"
+        },
+        {
+            "displayName": "颜色限制",
+            "id": "{1f75005b-7661-43bd-ad6c-6893e5911a92}",
+            "parameters": {
+                "paletteName": "AAP-64"
+            },
+            "posX": -657,
+            "posY": -266,
+            "type": "PaletteReduce"
+        },
+        {
+            "displayName": "抖动",
+            "id": "{58a370c5-8ba0-4d37-aa72-207dbbe81179}",
+            "parameters": {
+            },
+            "posX": -488,
+            "posY": -153,
+            "type": "Dither"
+        },
+        {
+            "displayName": "调整大小",
+            "id": "{0372730a-0695-4222-91e2-d37706997851}",
+            "parameters": {
+                "height": 400,
+                "width": 250
+            },
+            "posX": -497,
+            "posY": -626,
+            "type": "Resize"
+        }
+    ]
+}

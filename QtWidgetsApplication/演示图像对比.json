@@ -1,0 +1,64 @@
+{
+    "connections": [
+        {
+            "fromNodeId": "{4b5fe57b-28ef-4716-8bfe-efd161740597}",
+            "fromPort": 0,
+            "toNodeId": "{4350493a-d48b-41cb-811a-f9734efeeaf7}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{de191b71-fa0a-4287-931b-ce46da1558cb}",
+            "fromPort": 0,
+            "toNodeId": "{4350493a-d48b-41cb-811a-f9734efeeaf7}",
+            "toPort": 1
+        },
+        {
+            "fromNodeId": "{4350493a-d48b-41cb-811a-f9734efeeaf7}",
+            "fromPort": 0,
+            "toNodeId": "{1579101e-e0a2-4353-a331-6623ce4c678a}",
+            "toPort": 0
+        }
+    ],
+    "nodes": [
+        {
+            "displayName": "显示图片",
+            "id": "{1579101e-e0a2-4353-a331-6623ce4c678a}",
+            "parameters": {
+            },
+            "posX": -319,
+            "posY": -496,
+            "type": "ShowImage"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{de191b71-fa0a-4287-931b-ce46da1558cb}",
+            "parameters": {
+                "filePath": "D:/babycat.jpg"
+            },
+            "posX": -745,
+            "posY": -393,
+            "type": "LoadImage"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{4b5fe57b-28ef-4716-8bfe-efd161740597}",
+            "parameters": {
+                "filePath": "D:/beautifulcat.jpg"
+            },
+            "posX": -721,
+            "posY": -568,
+            "type": "LoadImage"
+        },
+        {
+            "displayName": "图像比对",
+            "id": "{4350493a-d48b-41cb-811a-f9734efeeaf7}",
+            "parameters": {
+                "blendRatio": 0.5,
+                "mergeMode": "Blend"
+            },
+            "posX": -511,
+            "posY": -442,
+            "type": "MergeImage"
+        }
+    ]
+}

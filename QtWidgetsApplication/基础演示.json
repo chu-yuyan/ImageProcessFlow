@@ -1,0 +1,115 @@
+{
+    "connections": [
+        {
+            "fromNodeId": "{61082a42-dc98-4dca-ad19-1c7400db7fe8}",
+            "fromPort": 0,
+            "toNodeId": "{03fd0119-c5e0-4cb2-951e-7cac68ed7d8b}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{03fd0119-c5e0-4cb2-951e-7cac68ed7d8b}",
+            "fromPort": 0,
+            "toNodeId": "{85b484ac-9979-4a70-aeda-bddd0faa89f9}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{879974f1-ae20-4236-9826-da568950b8c1}",
+            "fromPort": 0,
+            "toNodeId": "{61082a42-dc98-4dca-ad19-1c7400db7fe8}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{522a3b8f-a83b-43bc-acfe-9d416ce0fe73}",
+            "fromPort": 0,
+            "toNodeId": "{53497ef0-a2d0-4509-b8d7-7386e633a4d8}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{53497ef0-a2d0-4509-b8d7-7386e633a4d8}",
+            "fromPort": 0,
+            "toNodeId": "{60042f61-6c39-45a5-b74d-cb7da615f472}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{60042f61-6c39-45a5-b74d-cb7da615f472}",
+            "fromPort": 0,
+            "toNodeId": "{879974f1-ae20-4236-9826-da568950b8c1}",
+            "toPort": 0
+        }
+    ],
+    "nodes": [
+        {
+            "displayName": "加载图像",
+            "id": "{522a3b8f-a83b-43bc-acfe-9d416ce0fe73}",
+            "parameters": {
+                "filePath": "D:/test.jpg"
+            },
+            "posX": -779,
+            "posY": -602,
+            "type": "LoadImage"
+        },
+        {
+            "displayName": "显示图片",
+            "id": "{85b484ac-9979-4a70-aeda-bddd0faa89f9}",
+            "parameters": {
+            },
+            "posX": -303,
+            "posY": -635,
+            "type": "ShowImage"
+        },
+        {
+            "displayName": "高斯模糊",
+            "id": "{61082a42-dc98-4dca-ad19-1c7400db7fe8}",
+            "parameters": {
+                "radius": 1
+            },
+            "posX": -392,
+            "posY": -372,
+            "type": "Blur"
+        },
+        {
+            "displayName": "亮度",
+            "id": "{03fd0119-c5e0-4cb2-951e-7cac68ed7d8b}",
+            "parameters": {
+                "brightness": 0
+            },
+            "posX": -463,
+            "posY": -506,
+            "type": "Brightness"
+        },
+        {
+            "displayName": "旋转",
+            "id": "{879974f1-ae20-4236-9826-da568950b8c1}",
+            "parameters": {
+                "angle": 0
+            },
+            "posX": -273,
+            "posY": -239,
+            "type": "Rotate"
+        },
+        {
+            "displayName": "调整大小",
+            "id": "{53497ef0-a2d0-4509-b8d7-7386e633a4d8}",
+            "parameters": {
+                "height": 400,
+                "width": 400
+            },
+            "posX": -728,
+            "posY": -219,
+            "type": "Resize"
+        },
+        {
+            "displayName": "裁剪",
+            "id": "{60042f61-6c39-45a5-b74d-cb7da615f472}",
+            "parameters": {
+                "宽": 100,
+                "起始x": 0,
+                "起始y": 0,
+                "高": 100
+            },
+            "posX": -502,
+            "posY": -233,
+            "type": "Crop"
+        }
+    ]
+}

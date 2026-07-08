@@ -1,0 +1,65 @@
+{
+    "connections": [
+        {
+            "fromNodeId": "{0963a929-746a-4d70-8515-2f54049311ad}",
+            "fromPort": 0,
+            "toNodeId": "{204b28c4-8bf9-436f-abf8-977179b4c8ce}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{204b28c4-8bf9-436f-abf8-977179b4c8ce}",
+            "fromPort": 0,
+            "toNodeId": "{b2769d98-b88e-40a7-9e28-b37ac1228229}",
+            "toPort": 0
+        },
+        {
+            "fromNodeId": "{b2769d98-b88e-40a7-9e28-b37ac1228229}",
+            "fromPort": 0,
+            "toNodeId": "{053b062a-7526-45c6-9f95-25f433633baf}",
+            "toPort": 0
+        }
+    ],
+    "nodes": [
+        {
+            "displayName": "像素化",
+            "id": "{204b28c4-8bf9-436f-abf8-977179b4c8ce}",
+            "parameters": {
+                "blockSize": 13
+            },
+            "posX": -698,
+            "posY": -338,
+            "type": "Pixelate"
+        },
+        {
+            "displayName": "加载图像",
+            "id": "{0963a929-746a-4d70-8515-2f54049311ad}",
+            "parameters": {
+                "filePath": "D:/test.jpg"
+            },
+            "posX": -803,
+            "posY": -562,
+            "type": "LoadImage"
+        },
+        {
+            "displayName": "拼豆图纸",
+            "id": "{b2769d98-b88e-40a7-9e28-b37ac1228229}",
+            "parameters": {
+                "cellSize": 40,
+                "fontSize": 14,
+                "showColor": true
+            },
+            "posX": -423,
+            "posY": -321,
+            "type": "BeadPattern"
+        },
+        {
+            "displayName": "显示图片",
+            "id": "{053b062a-7526-45c6-9f95-25f433633baf}",
+            "parameters": {
+            },
+            "posX": -301,
+            "posY": -471,
+            "type": "ShowImage"
+        }
+    ]
+}
